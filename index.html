@@ -1,0 +1,1810 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COMMS — Control de Comunicados</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{
+  --bg:#f8f9fb;--surface:#fff;--surface2:#f3f4f7;--border:#e4e7ed;--border-light:#eff1f5;
+  --txt:#1a1d23;--txt2:#6b7280;--muted:#9ca3af;
+  --blue:#2563eb;--blue-l:#eff6ff;--blue-h:#1d4ed8;
+  --red:#dc2626;--red-l:#fef2f2;
+  --orange:#ea580c;--orange-l:#fff7ed;
+  --green:#16a34a;--green-l:#f0fdf4;
+  --yellow:#d97706;--yellow-l:#fffbeb;
+  --purple:#7c3aed;--purple-l:#f5f3ff;
+  --r:6px;--rl:10px;
+  --sh:0 1px 3px rgba(0,0,0,.07);--sh2:0 4px 16px rgba(0,0,0,.10);--sh3:0 8px 32px rgba(0,0,0,.13);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--txt);font-size:13.5px;line-height:1.5;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+button,select,input,textarea{font-family:'DM Sans',sans-serif}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:3px}
+
+/* ── TOPBAR ── */
+.topbar{height:52px;background:var(--surface);border-bottom:1.5px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:16px;flex-shrink:0;box-shadow:var(--sh)}
+.app-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.logo-icon{width:32px;height:32px;background:var(--blue);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.logo-icon svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:2}
+.logo-name{font-size:17px;font-weight:800;color:var(--txt);letter-spacing:-.5px}
+.logo-ver{font-size:10px;color:var(--muted);font-weight:400;margin-top:1px}
+.topbar-sep{width:1px;height:22px;background:var(--border);margin:0 4px}
+.nav-tabs{display:flex;gap:2px}
+.nav-tab{padding:6px 14px;border-radius:var(--r);font-size:12.5px;font-weight:600;color:var(--txt2);cursor:pointer;border:none;background:none;transition:all .15s;display:flex;align-items:center;gap:6px}
+.nav-tab:hover{background:var(--surface2);color:var(--txt)}
+.nav-tab.active{background:var(--blue-l);color:var(--blue);font-weight:700}
+.nav-tab svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.btn-primary{padding:7px 14px;background:var(--blue);color:#fff;border:none;border-radius:var(--r);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .15s}
+.btn-primary:hover{background:var(--blue-h)}
+.btn-primary svg{width:13px;height:13px;stroke:#fff;fill:none;stroke-width:2.5}
+.btn-secondary{padding:7px 12px;background:var(--surface2);color:var(--txt2);border:1.5px solid var(--border);border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .15s}
+.btn-secondary:hover{background:var(--border);color:var(--txt)}
+.btn-secondary svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0}
+
+/* ── LAYOUT ── */
+.app-body{flex:1;overflow:hidden;display:flex}
+.view{display:none;flex:1;overflow:hidden;flex-direction:column}
+.view.active{display:flex}
+
+/* ── TABLA ── */
+.table-view{flex:1;overflow:auto;padding:20px}
+.tbl-toolbar{display:flex;gap:8px;margin-bottom:14px;align-items:center;flex-wrap:wrap}
+.search-box{display:flex;align-items:center;gap:6px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--r);padding:5px 10px;flex:1;min-width:200px;max-width:340px}
+.search-box svg{width:13px;height:13px;stroke:var(--muted);fill:none;stroke-width:2;flex-shrink:0}
+.search-box input{border:none;outline:none;font-size:12.5px;color:var(--txt);background:none;width:100%}
+.fsel{height:30px;border:1.5px solid var(--border);border-radius:var(--r);font-size:12px;color:var(--txt2);background:var(--surface2);padding:0 8px;cursor:pointer;font-family:'DM Sans',sans-serif;outline:none}
+.tbl-wrap{background:var(--surface);border-radius:var(--rl);border:1.5px solid var(--border);overflow:hidden;box-shadow:var(--sh)}
+table.comms{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
+table.comms thead tr{background:var(--surface2);border-bottom:1.5px solid var(--border)}
+table.comms th{padding:6px 8px;text-align:left;font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;white-space:nowrap;cursor:pointer;user-select:none;overflow:hidden}
+table.comms th:hover{color:var(--blue)}
+table.comms td{padding:5px 8px;border-bottom:1px solid var(--border-light);vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:0}
+table.comms tr:hover td{background:#fafbfd}
+table.comms tr:last-child td{border-bottom:none}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;white-space:nowrap}
+.badge-in{background:var(--blue-l);color:var(--blue)}
+.badge-out{background:var(--orange-l);color:var(--orange)}
+.badge-resp{background:var(--purple-l);color:var(--purple)}
+.badge-pend{background:var(--yellow-l);color:var(--yellow)}
+.badge-done{background:var(--green-l);color:var(--green)}
+.badge-int{background:var(--surface2);color:var(--txt2)}
+.badge-ext{background:#fdf4ff;color:#7c3aed}
+.mono{font-family:'DM Mono',monospace;font-size:11px;font-weight:600}
+.row-actions{display:flex;gap:4px;opacity:0;transition:opacity .15s}
+table.comms tr:hover .row-actions{opacity:1}
+.icon-btn{width:26px;height:26px;border:none;border-radius:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--surface2);color:var(--txt2);transition:all .15s}
+.icon-btn:hover{background:var(--blue-l);color:var(--blue)}
+.icon-btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2}
+.empty-state{text-align:center;padding:64px 20px;color:var(--muted)}
+.empty-state svg{width:48px;height:48px;stroke:var(--border);fill:none;stroke-width:1.5;margin-bottom:16px}
+.count-chip{background:var(--blue);color:#fff;border-radius:10px;padding:1px 8px;font-size:10px;font-weight:700;margin-left:6px}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(10,15,30,.45);backdrop-filter:blur(4px);z-index:9999;display:none;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--surface);border-radius:12px;box-shadow:var(--sh3);width:640px;max-width:96vw;max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-hdr{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-ttl{font-size:15px;font-weight:800;color:var(--txt)}
+.modal-sub{font-size:11.5px;color:var(--muted);margin-top:2px}
+.modal-body{padding:20px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.modal-ftr{padding:14px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0}
+.fg{display:flex;flex-direction:column;gap:4px}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.frow3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.flabel{font-size:10.5px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.4px}
+.flabel span{color:var(--red)}
+.finput{border:1.5px solid var(--border);border-radius:var(--r);padding:7px 10px;font-size:13px;color:var(--txt);background:var(--surface);outline:none;transition:border-color .15s;font-family:'DM Sans',sans-serif;width:100%}
+.finput:focus{border-color:var(--blue)}
+.finput[type="date"]{cursor:pointer}
+textarea.finput{resize:vertical;min-height:70px}
+.fsect{font-size:11px;font-weight:800;color:var(--blue);text-transform:uppercase;letter-spacing:.6px;padding-bottom:6px;border-bottom:1px solid var(--border-light);margin-top:4px}
+.btn-cancel{padding:7px 14px;background:var(--surface2);color:var(--txt2);border:1.5px solid var(--border);border-radius:var(--r);font-size:12.5px;font-weight:600;cursor:pointer}
+.btn-cancel:hover{background:var(--border)}
+.btn-save{padding:7px 16px;background:var(--blue);color:#fff;border:none;border-radius:var(--r);font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px}
+.btn-save:hover{background:var(--blue-h)}
+.resp-link{background:var(--blue-l);border:1.5px solid #bfdbfe;border-radius:var(--r);padding:10px 12px;font-size:12px;color:#1e40af;display:flex;align-items:center;gap:8px;cursor:pointer}
+.resp-link:hover{background:#dbeafe}
+
+/* ── TIMELINE ── */
+.timeline-view{flex:1;overflow:auto;padding:24px 32px}
+.tl-header{margin-bottom:24px}
+.tl-title{font-size:18px;font-weight:800;color:var(--txt);margin-bottom:4px}
+.tl-sub{font-size:12.5px;color:var(--muted)}
+.tl-container{position:relative;padding-left:32px}
+.tl-line{position:absolute;left:11px;top:0;bottom:0;width:2px;background:var(--border)}
+.tl-item{position:relative;margin-bottom:20px}
+.tl-dot{position:absolute;left:-26px;width:14px;height:14px;border-radius:50%;border:2.5px solid var(--surface);top:4px}
+.tl-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--rl);padding:14px 16px;box-shadow:var(--sh)}
+.tl-card:hover{box-shadow:var(--sh2);border-color:var(--blue-l)}
+.tl-card-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px}
+.tl-num{font-family:'DM Mono',monospace;font-size:11px;font-weight:700;color:var(--blue)}
+.tl-fecha{font-size:10.5px;color:var(--muted);white-space:nowrap}
+.tl-asunto{font-size:13px;font-weight:700;color:var(--txt);margin-bottom:4px}
+.tl-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tl-resp{background:var(--surface2);border-left:3px solid var(--blue);border-radius:0 4px 4px 0;padding:6px 10px;margin-top:8px;font-size:11.5px;color:var(--txt2)}
+.tl-resp strong{color:var(--blue)}
+
+/* ── CONSTELACIÓN ── */
+.constel-view{flex:1;overflow:hidden;position:relative;background:var(--bg)}
+/* correlCanvas positioned inline */
+.correl-toolbar{position:absolute;top:16px;left:50%;transform:translateX(-50%);background:var(--surface);border:1.5px solid var(--border);border-radius:20px;padding:6px 14px;display:flex;gap:8px;align-items:center;box-shadow:var(--sh2);z-index:10}
+.correl-legend{position:absolute;bottom:16px;left:16px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--rl);padding:12px 14px;box-shadow:var(--sh2);z-index:20;font-size:11px}
+.legend-item{display:flex;align-items:center;gap:6px;margin-bottom:5px}
+.legend-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.node-tooltip{position:absolute;background:var(--txt);color:#fff;border-radius:6px;padding:6px 10px;font-size:11px;pointer-events:none;z-index:30;white-space:nowrap;opacity:0;transition:opacity .15s}
+
+/* ── DASHBOARD ── */
+.dash-view{flex:1;overflow:auto;padding:24px 28px}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px;margin-bottom:24px}
+.kpi-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--rl);padding:18px 16px;box-shadow:var(--sh)}
+.kpi-val{font-size:32px;font-weight:900;color:var(--blue);line-height:1;font-family:'DM Mono',monospace}
+.kpi-lbl{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:6px;font-weight:700}
+.kpi-sub{font-size:11px;color:var(--txt2);margin-top:3px}
+.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.chart-card{background:var(--surface);border:1.5px solid var(--border);border-radius:var(--rl);padding:18px 20px;box-shadow:var(--sh)}
+.chart-title{font-size:13px;font-weight:700;color:var(--txt);margin-bottom:14px}
+.bar-chart{display:flex;flex-direction:column;gap:8px}
+.bar-row{display:flex;align-items:center;gap:8px;font-size:11.5px}
+.bar-label{width:120px;color:var(--txt2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0}
+.bar-track{flex:1;height:12px;background:var(--surface2);border-radius:6px;overflow:hidden}
+.bar-fill{height:100%;border-radius:6px;transition:width .4s}
+.bar-val{width:28px;text-align:right;color:var(--txt);font-weight:700;font-size:11px;flex-shrink:0}
+.donut-wrap{display:flex;align-items:center;gap:20px}
+.donut-legend{display:flex;flex-direction:column;gap:6px}
+.donut-lbl{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--txt2)}
+.donut-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* ── DETAIL PANEL ── */
+.detail-panel{width:380px;flex-shrink:0;border-left:1.5px solid var(--border);background:var(--surface);display:none;flex-direction:column;overflow:hidden}
+.detail-panel.open{display:flex}
+.dp-hdr{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between}
+.dp-body{flex:1;overflow-y:auto;padding:16px}
+.dp-section{margin-bottom:16px}
+.dp-lbl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.dp-val{font-size:13px;color:var(--txt);line-height:1.5}
+.dp-responses{background:var(--surface2);border-radius:var(--r);padding:10px 12px}
+.dp-resp-item{border-left:3px solid var(--blue);padding:6px 10px;margin-bottom:8px;background:var(--blue-l);border-radius:0 4px 4px 0;cursor:pointer}
+.dp-resp-item:last-child{margin-bottom:0}
+.dp-resp-item:hover{background:#dbeafe}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.modal-box{animation:fadeIn .18s ease}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="app-logo">
+    <div class="logo-icon"><svg viewBox="0 0 24 24"><path d="M4 4h16v12H4z"/><path d="M8 20h8M12 16v4"/><path d="M4 8l8 5 8-5"/></svg></div>
+    <div><div class="logo-name">COMMS</div><div class="logo-ver">Control de Comunicados v1.0</div></div>
+  </div>
+  <div class="topbar-sep"></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showView('listView',this)" data-view="listView">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>Comunicados
+    </button>
+    <button class="nav-tab" onclick="showView('dashView',this);renderDashboard()" data-view="dashView">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard
+    </button>
+  </div>
+  <div class="topbar-right">
+    <!-- Menú archivos -->
+    <div style="position:relative" id="archivosMenuWrap">
+      <button class="btn-secondary" onclick="_toggleArchivosMenu()" id="archivosMenuBtn">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Archivos
+        <svg viewBox="0 0 24 24" style="width:11px;height:11px"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div id="archivosMenu" style="display:none;position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1.5px solid var(--border);border-radius:10px;box-shadow:var(--sh3);z-index:500;min-width:200px;overflow:hidden">
+        <div style="font-size:9.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:8px 12px 4px">Importar</div>
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 14px;cursor:pointer;font-size:12.5px;color:var(--txt2)" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 12h8M12 8v8"/></svg>
+          Cargar Excel
+          <input type="file" accept=".xlsx,.xls" style="display:none" onchange="importExcel(this);_toggleArchivosMenu()">
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 14px;cursor:pointer;font-size:12.5px;color:var(--txt2)" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Cargar ZIP sesión
+          <input type="file" accept=".zip" style="display:none" onchange="importZIP(this);_toggleArchivosMenu()">
+        </label>
+        <div style="height:1px;background:var(--border-light);margin:4px 0"></div>
+        <div style="font-size:9.5px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;padding:4px 12px">Exportar</div>
+        <button onclick="exportExcel();_toggleArchivosMenu()" style="width:100%;display:flex;align-items:center;gap:8px;padding:8px 14px;background:none;border:none;cursor:pointer;font-size:12.5px;color:var(--txt2);text-align:left" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+          Exportar Excel
+        </button>
+        <button onclick="exportZIP();_toggleArchivosMenu()" style="width:100%;display:flex;align-items:center;gap:8px;padding:8px 14px;background:none;border:none;cursor:pointer;font-size:12.5px;color:var(--txt2);text-align:left" onmouseenter="this.style.background='var(--surface2)'" onmouseleave="this.style.background=''">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar ZIP completo
+        </button>
+      </div>
+    </div>
+    <button class="btn-primary" onclick="openModal()">
+      <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo Comunicado
+    </button>
+  </div>
+</div>
+
+<!-- APP BODY -->
+<div class="app-body">
+
+<!-- ══ LISTA ══ -->
+<div class="view active" id="listView" style="flex-direction:row">
+  <div class="table-view" style="flex:1;overflow:hidden;display:flex;flex-direction:column">
+    <div class="tbl-toolbar">
+      <div class="search-box" style="max-width:380px;flex:none">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" placeholder="Buscar por número, asunto, destino..." oninput="filtrar()" id="searchInput" style="width:300px">
+      </div>
+      <!-- Filtros ocultos — se activan desde encabezados de columna -->
+      <input type="hidden" id="fTipo" value="">
+      <input type="hidden" id="fOrigen" value="">
+      <input type="hidden" id="fDestino" value="">
+      <input type="hidden" id="fEstado" value="">
+      <input type="hidden" id="fProyecto" value="">
+      <input type="hidden" id="fRol" value="">
+      <input type="hidden" id="fAmbito" value="">
+      <!-- Chips de filtros activos -->
+      <div id="activeFiltersBar" style="display:flex;gap:5px;flex-wrap:wrap;align-items:center"></div>
+    </div>
+    <div class="tbl-wrap" style="flex:1;overflow:auto">
+      <table class="comms" id="commsTable">
+        <colgroup>
+          <col style="width:120px"><col style="width:95px"><col style="width:100px">
+          <col style="width:155px"><col style="width:80px"><col style="width:80px">
+          <col style="width:76px"><col style="width:42px">
+          <col style="width:135px"><col style="width:135px">
+          <col><col style="width:98px">
+        </colgroup>
+        <thead>
+          <tr id="commsTableHead">
+            <th onclick="_thClick('proyecto',this)" data-col="proyecto">PROYECTO</th>
+            <th onclick="_thClick('contrato',this)" data-col="contrato">CONTRATO</th>
+            <th onclick="_thClick('rol',this)" data-col="rol">ROL</th>
+            <th onclick="_thClick('radicado',this)" data-col="radicado">N° RADICADO</th>
+            <th onclick="sortBy('fecha_emision')">F. EMISIÓN ↕</th>
+            <th onclick="sortBy('fecha_recepcion')">F. RECEPCIÓN ↕</th>
+            <th onclick="_thClick('tipo',this)" data-col="tipo">TIPO</th>
+            <th onclick="_thClick('ambito',this)" data-col="ambito">ÁMB.</th>
+            <th onclick="_thClick('origen',this)" data-col="origen">ORIGEN</th>
+            <th onclick="_thClick('destino',this)" data-col="destino">DESTINO</th>
+            <th>ASUNTO</th>
+            <th onclick="_thClick('estado',this)" data-col="estado">ESTADO</th>
+          </tr>
+        </thead>
+        <tbody id="tablebody"></tbody>
+      </table>
+    </div>
+    <div style="padding:8px 16px;font-size:11px;color:var(--muted);border-top:1px solid var(--border-light);background:var(--surface);flex-shrink:0">
+      <span id="countLabel">0 comunicados</span>
+    </div>
+  </div>
+  <!-- Panel derecho: Detalle + Timeline + Correlación -->
+  <div class="detail-panel" id="detailPanel" style="width:420px">
+    <!-- Panel tabs -->
+    <div style="display:flex;border-bottom:1.5px solid var(--border);flex-shrink:0;background:var(--surface2)">
+      <button class="dp-tab active" id="dptab_detalle" onclick="switchDpTab('detalle',this)" style="flex:1;padding:9px 6px;border:none;background:none;cursor:pointer;font-size:11px;font-weight:700;color:var(--blue);border-bottom:2px solid var(--blue)">📋 Detalle</button>
+      <button class="dp-tab" id="dptab_timeline" onclick="switchDpTab('timeline',this);renderTimeline()" style="flex:1;padding:9px 6px;border:none;background:none;cursor:pointer;font-size:11px;font-weight:600;color:var(--txt2);border-bottom:2px solid transparent">⏱ Línea tiempo</button>
+      <button class="dp-tab" id="dptab_correl" onclick="switchDpTab('correl',this);renderCorrelacionPanel()" style="flex:1;padding:9px 6px;border:none;background:none;cursor:pointer;font-size:11px;font-weight:600;color:var(--txt2);border-bottom:2px solid transparent">✦ Correlación</button>
+      <button onclick="closeDetail()" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--muted);padding:6px 10px;flex-shrink:0">✕</button>
+    </div>
+    <!-- Detalle tab -->
+    <div id="dp_pane_detalle" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;min-height:0">
+      <div style="padding:12px 14px;border-bottom:1px solid var(--border-light);flex-shrink:0">
+        <div style="font-size:14px;font-weight:800;color:var(--txt)" id="dp_num">—</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px" id="dp_fecha">—</div>
+      </div>
+      <div class="dp-body" id="dp_body"></div>
+    </div>
+    <!-- Timeline tab -->
+    <div id="dp_pane_timeline" style="display:none;flex:1;overflow-y:auto;flex-direction:column">
+      <div style="padding:10px 14px;border-bottom:1px solid var(--border-light);display:flex;gap:6px;flex-wrap:wrap;flex-shrink:0;background:var(--surface2)">
+        <select class="fsel" id="tl_filtro_proyecto" onchange="renderTimeline()" style="height:26px;font-size:11px"><option value="">Todos proyectos</option></select>
+        <select class="fsel" id="tl_filtro_tipo" onchange="renderTimeline()" style="height:26px;font-size:11px"><option value="">Todos tipos</option><option value="Entrante">Entrantes</option><option value="Saliente">Salientes</option></select>
+        <select class="fsel" id="tl_filtro_entidad" onchange="renderTimeline()" style="height:26px;font-size:11px"><option value="">Todas entidades</option></select>
+      </div>
+      <div id="timelineBody" class="tl-container" style="padding:16px 16px 16px 36px"><div class="tl-line"></div></div>
+    </div>
+    <!-- Correlación tab -->
+    <div id="dp_pane_correl" style="display:none;flex:1;position:relative;overflow:hidden">
+      <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:20;display:flex;gap:6px;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:4px 10px;box-shadow:var(--sh)">
+        <select class="fsel" id="correl_filtro" onchange="renderCorrelacionPanel()" style="height:24px;font-size:10.5px;border:none;background:none">
+          <option value="all">Todo</option><option value="Entrante">Entrantes</option><option value="Saliente">Salientes</option>
+        </select>
+        <button onclick="renderCorrelacionPanel()" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--muted)">↺</button>
+      </div>
+      <canvas id="correlCanvas" style="position:absolute;inset:0;width:100%;height:100%"></canvas>
+      <div id="correlTooltip" style="position:absolute;background:var(--txt);color:#fff;border-radius:6px;padding:6px 10px;font-size:10.5px;pointer-events:none;z-index:30;white-space:nowrap;opacity:0;transition:opacity .15s"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LÍNEA DE TIEMPO ══ -->
+<div class="view" id="timelineView">
+  <div class="timeline-view">
+    <div class="tl-header">
+      <div class="tl-title">Línea de Tiempo</div>
+      <div class="tl-sub">Historial cronológico de comunicados, respuestas y cadenas de correspondencia</div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <select class="fsel" id="tl_filtro_proyecto" onchange="renderTimeline()"><option value="">Todos los proyectos</option></select>
+        <select class="fsel" id="tl_filtro_tipo" onchange="renderTimeline()">
+          <option value="">Todos los tipos</option><option value="Entrante">Entrantes</option><option value="Saliente">Salientes</option>
+        </select>
+        <select class="fsel" id="tl_filtro_entidad" onchange="renderTimeline()"><option value="">Todas las entidades</option></select>
+      </div>
+    </div>
+    <div id="timelineBody" class="tl-container"><div class="tl-line"></div></div>
+  </div>
+</div>
+
+
+<!-- ══ DASHBOARD ══ -->
+<div class="view" id="dashView">
+  <div class="dash-view" id="dashContainer"></div>
+</div>
+
+</div><!-- app-body -->
+
+<!-- ══ MODAL COMUNICADO ══ -->
+<div class="modal-overlay" id="modalComm" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box" onclick="event.stopPropagation()" style="width:700px">
+    <div class="modal-hdr">
+      <div>
+        <div class="modal-ttl" id="modalTitle">Nuevo Comunicado</div>
+        <div class="modal-sub">Registra un oficio entrante o saliente</div>
+      </div>
+      <button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted)">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Tipo de registro -->
+      <div style="display:flex;gap:8px;margin-bottom:4px">
+        <button id="btn_modo_nuevo" onclick="_setModoComm('nuevo')"
+          style="flex:1;padding:9px;border-radius:var(--r);border:2px solid var(--blue);background:var(--blue);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s">
+          ✉️ Nuevo comunicado
+        </button>
+        <button id="btn_modo_reiter" onclick="_setModoComm('reiteracion')"
+          style="flex:1;padding:9px;border-radius:var(--r);border:2px solid var(--border);background:var(--surface2);color:var(--txt2);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s">
+          🔁 Reiteración de oficio
+        </button>
+      </div>
+
+      <!-- Bloque reiteración -->
+      <div id="bloque_reiteracion" style="display:none;background:#fff7ed;border:1.5px solid #fed7aa;border-radius:var(--r);padding:12px 14px;margin-bottom:4px">
+        <div class="flabel" style="color:#ea580c;margin-bottom:6px">🔁 Buscar oficio original a reiterar</div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input class="finput" id="f_reiter_busca" placeholder="Número de radicado..." oninput="_buscarReiteracion(this.value)" style="flex:1">
+          <div id="f_reiter_estado" style="font-size:11px;color:var(--muted);white-space:nowrap"></div>
+        </div>
+        <div id="f_reiter_preview" style="margin-top:6px"></div>
+      </div>
+
+      <div class="fsect">Identificación</div>
+      <div class="frow3">
+        <div class="fg">
+          <div class="flabel">N° Radicado <span>*</span></div>
+          <input class="finput" id="f_radicado" placeholder="Ej: SCJ-2026-001234">
+        </div>
+        <div class="fg">
+          <div class="flabel">Tipo <span>*</span></div>
+          <select class="finput" id="f_tipo" onchange="toggleTipoFields()">
+            <option value="">Seleccionar...</option>
+            <option value="Entrante">Entrante (recibido)</option>
+            <option value="Saliente">Saliente (enviado)</option>
+          </select>
+        </div>
+        <div class="fg">
+          <div class="flabel">Ámbito</div>
+          <select class="finput" id="f_ambito">
+            <option value="Interno">Interno</option>
+            <option value="Externo">Externo</option>
+          </select>
+        </div>
+      </div>
+      <div class="frow">
+        <div class="fg">
+          <div class="flabel">Fecha de Emisión</div>
+          <input class="finput" type="date" id="f_fecha_emision">
+        </div>
+        <div class="fg">
+          <div class="flabel">Fecha de Recepción</div>
+          <input class="finput" type="date" id="f_fecha_recepcion">
+        </div>
+      </div>
+      <div class="fsect">Origen / Destino</div>
+      <div class="frow">
+        <div class="fg">
+          <div class="flabel">Origen <span>*</span></div>
+          <input class="finput" id="f_origen" placeholder="Ej: SCJ — Secretaría Distrital" list="list_entidades">
+          <datalist id="list_entidades"></datalist>
+        </div>
+        <div class="fg">
+          <div class="flabel">Destino <span>*</span></div>
+          <input class="finput" id="f_destino" placeholder="Ej: Interventoría GEC" list="list_entidades">
+        </div>
+      </div>
+      <div class="frow3">
+        <div class="fg">
+          <div class="flabel">Proyecto</div>
+          <input class="finput" id="f_proyecto" placeholder="Ej: CER FASE II" list="list_proyectos">
+          <datalist id="list_proyectos"></datalist>
+        </div>
+        <div class="fg">
+          <div class="flabel">Contrato</div>
+          <input class="finput" id="f_contrato" placeholder="Ej: SCJ-1846-2021">
+        </div>
+        <div class="fg">
+          <div class="flabel">Rol / Función</div>
+          <select class="finput" id="f_rol">
+            <option value="">— Sin rol —</option>
+            <option value="Obra">Obra</option>
+            <option value="Interventoría">Interventoría</option>
+            <option value="Supervisión">Supervisión</option>
+            <option value="Contratante">Contratante</option>
+            <option value="Contratista">Contratista</option>
+            <option value="Diseño">Diseño</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+      </div>
+      <div class="fsect">Contenido</div>
+      <div class="fg">
+        <div class="flabel">Asunto <span>*</span></div>
+        <input class="finput" id="f_asunto" placeholder="Descripción breve del contenido del comunicado">
+      </div>
+      <div class="fg">
+        <div class="flabel">Descripción / Observaciones</div>
+        <textarea class="finput" id="f_descripcion" placeholder="Detalle adicional, compromisos, temas tratados..."></textarea>
+      </div>
+      <div class="fg">
+        <div class="flabel">Estado</div>
+        <select class="finput" id="f_estado">
+          <option value="Sin respuesta requerida">Sin respuesta requerida</option>
+          <option value="Pendiente respuesta">Pendiente respuesta</option>
+          <option value="Respondido">Respondido</option>
+          <option value="Reiterado">Reiterado</option>
+          <option value="Archivado">Archivado</option>
+        </select>
+      </div>
+      <div class="fsect">Documento</div>
+      <div class="fg">
+        <div class="flabel">📎 Adjuntar PDF del comunicado</div>
+        <label style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--surface2);border:1.5px dashed var(--border);border-radius:var(--r);cursor:pointer;font-size:12.5px;color:var(--muted);transition:border-color .15s" onmouseenter="this.style.borderColor='var(--blue)'" onmouseleave="this.style.borderColor='var(--border)'">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Clic para adjuntar PDF, imagen u oficio
+          <input type="file" accept=".pdf,image/*" style="display:none" onchange="_commFileChange(this)">
+        </label>
+        <div id="f_doc_preview" style="margin-top:5px"></div>
+      </div>
+      <div class="fsect">Vinculación</div>
+      <div class="fg">
+        <div class="flabel">¿Responde a otro comunicado?</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-top:4px">
+          <div style="position:relative;flex:1">
+            <input class="finput" id="f_resp_busca" placeholder="Buscar por N° radicado o asunto..."
+              oninput="_buscarVinculo(this.value)" autocomplete="off"
+              style="padding-right:32px">
+            <div id="f_resp_dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1.5px solid var(--border);border-radius:0 0 var(--r) var(--r);box-shadow:var(--sh2);max-height:160px;overflow-y:auto;z-index:200"></div>
+          </div>
+          <button onclick="_limpiarVinculo()" title="Quitar vinculación"
+            style="padding:7px 10px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--r);cursor:pointer;font-size:13px;color:var(--muted)">✕</button>
+        </div>
+        <input type="hidden" id="f_respuesta_a">
+        <div id="resp_preview" style="margin-top:6px"></div>
+      </div>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+      <button class="btn-save" onclick="guardarComm()">
+        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Guardar
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL EVENTO TIMELINE ══ -->
+<div class="modal-overlay" id="modalEvento" onclick="if(event.target===this)_closeEventoModal()">
+  <div class="modal-box" onclick="event.stopPropagation()" style="width:480px">
+    <div class="modal-hdr">
+      <div>
+        <div class="modal-ttl">Registrar Evento</div>
+        <div class="modal-sub">En: <span id="mev_comm_label" style="font-weight:700;color:var(--blue)"></span></div>
+      </div>
+      <button onclick="_closeEventoModal()" style="background:none;border:none;cursor:pointer;font-size:18px;color:var(--muted)">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="frow3">
+        <div class="fg">
+          <div class="flabel">Tipo <span>*</span></div>
+          <select class="finput" id="mev_tipo">
+            <option value="">Seleccionar...</option>
+            <option value="oficio">📄 Oficio</option>
+            <option value="correo">✉️ Correo</option>
+            <option value="nota">📌 Nota interna</option>
+          </select>
+        </div>
+        <div class="fg">
+          <div class="flabel">Fecha</div>
+          <input class="finput" type="date" id="mev_fecha">
+        </div>
+        <div class="fg">
+          <div class="flabel">N° Oficio / Correo <span>*</span></div>
+          <input class="finput" id="mev_radicado" placeholder="Ej: SCJ-2026-001500">
+        </div>
+      </div>
+      <div class="fg">
+        <div class="flabel">Asunto <span>*</span></div>
+        <input class="finput" id="mev_asunto" placeholder="Descripción del evento o respuesta">
+      </div>
+      <div class="fg">
+        <div class="flabel">Descripción / Notas</div>
+        <textarea class="finput" id="mev_desc" placeholder="Detalle adicional, compromisos, observaciones..." style="min-height:60px"></textarea>
+      </div>
+      <div class="fg">
+        <div class="flabel">📎 Adjuntar soporte (PDF, imagen)</div>
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--surface2);border:1.5px dashed var(--border);border-radius:var(--r);cursor:pointer;font-size:12px;color:var(--muted)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+          Clic para adjuntar archivo
+          <input type="file" accept=".pdf,image/*" style="display:none" onchange="_eventoFileChange(this)">
+        </label>
+        <div id="mev_file_preview"></div>
+      </div>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn-cancel" onclick="_closeEventoModal()">Cancelar</button>
+      <button class="btn-save" onclick="_guardarEvento()">
+        <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" fill="none" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Guardar evento
+      </button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" style="position:fixed;bottom:24px;right:24px;background:var(--txt);color:#fff;padding:10px 16px;border-radius:8px;font-size:12.5px;font-weight:600;display:none;z-index:99999;box-shadow:var(--sh3);animation:fadeIn .2s ease"></div>
+
+<script>
+// ════════════════════════════════════════════
+//  DATA STORE
+// ════════════════════════════════════════════
+var DB = {
+  comunicados: [],
+  eventos: {},        // { commId: [{id,fecha,tipo,radicado_ref,asunto,descripcion,soporte_b64,soporte_name,created_at}] }
+  _nextId: 1,
+  _sortField: 'fecha_emision',
+  _sortDir: -1,
+  _editId: null,
+  _selectedId: null,
+  _dpTab: 'detalle'
+};
+
+var ENTIDADES_DEFAULT = ['SCJ','Interventoría GEC','Bienes','Operaciones','Contratista','IDIPRON','SDM','SDP'];
+var PROYECTOS_DEFAULT = ['CER FASE II','CER FASE I','IDIPRON 2025'];
+var COLORES_ENTIDAD = {};
+var PALETTE = ['#2563eb','#ea580c','#16a34a','#7c3aed','#d97706','#dc2626','#0891b2','#db2777','#65a30d','#9333ea'];
+
+function getEntidadColor(e) {
+  if (!COLORES_ENTIDAD[e]) {
+    var keys = Object.keys(COLORES_ENTIDAD);
+    COLORES_ENTIDAD[e] = PALETTE[keys.length % PALETTE.length];
+  }
+  return COLORES_ENTIDAD[e];
+}
+
+// ── Utils ──
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = type==='error'?'var(--red)':type==='ok'?'#16a34a':'var(--txt)';
+  t.style.display = 'block';
+  clearTimeout(t._tmr);
+  t._tmr = setTimeout(function(){ t.style.display='none'; }, 3000);
+}
+
+function fmtDate(d) {
+  if (!d) return '—';
+  if (d.includes('-')) { var p=d.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; }
+  return d;
+}
+
+function todayISO() {
+  var n=new Date(); return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0');
+}
+
+function showView(id, el) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(el) el.classList.add('active');
+}
+
+// ════════════════════════════════════════════
+//  MODAL
+// ════════════════════════════════════════════
+function openModal(id) {
+  DB._editId = id || null;
+  var m = document.getElementById('modalComm');
+  var comm = id ? DB.comunicados.find(c=>c.id===id) : null;
+  document.getElementById('modalTitle').textContent = id ? 'Editar Comunicado' : 'Nuevo Comunicado';
+
+  // Reset
+  ['f_radicado','f_origen','f_destino','f_proyecto','f_contrato','f_asunto','f_descripcion'].forEach(function(x){
+    document.getElementById(x).value = comm ? (comm[x.replace('f_','')] || '') : '';
+  });
+  document.getElementById('f_tipo').value = comm ? comm.tipo : '';
+  document.getElementById('f_rol').value = comm ? (comm.rol||'') : '';
+  DB._commFile = null;
+  _updateDocPreview(comm ? comm.doc_b64 : null, comm ? comm.doc_name : null);
+  document.getElementById('f_ambito').value = comm ? (comm.ambito||'Externo') : 'Externo';
+  document.getElementById('f_estado').value = comm ? (comm.estado||'Sin respuesta requerida') : 'Sin respuesta requerida';
+  document.getElementById('f_fecha_emision').value = comm ? (comm.fecha_emision||'') : todayISO();
+  document.getElementById('f_fecha_recepcion').value = comm ? (comm.fecha_recepcion||'') : '';
+
+  // Poblar select de respuesta_a
+  var sel = document.getElementById('f_respuesta_a');
+  sel.innerHTML = '<option value="">No es respuesta (comunicado independiente)</option>';
+  DB.comunicados.filter(function(c){ return !id || c.id !== id; }).forEach(function(c){
+    var opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = (c.radicado||c.id) + ' — ' + (c.asunto||'').slice(0,40);
+    sel.appendChild(opt);
+  });
+  sel.value = comm ? (comm.respuesta_a||'') : '';
+  _updateRespPreview();
+
+  // Datalists
+  _refreshDatalist('list_entidades', _getEntidades());
+  _refreshDatalist('list_proyectos', _getProyectos());
+  // Reset modo Nuevo/Reiteración
+  _setModoComm('nuevo');
+  DB._reiterOrigId = null;
+  var rb = document.getElementById('f_reiter_busca'); if(rb) rb.value='';
+  var rp = document.getElementById('f_reiter_preview'); if(rp) rp.innerHTML='';
+  var re = document.getElementById('f_reiter_estado'); if(re) re.textContent='';
+  // Reset vinculación buscador
+  var vb = document.getElementById('f_resp_busca');
+  if(vb) vb.value = comm && comm.respuesta_a ? ((DB.comunicados.find(function(x){return x.id===comm.respuesta_a;})||{}).radicado||'') : '';
+  var dd = document.getElementById('f_resp_dropdown'); if(dd) dd.style.display='none';
+  document.getElementById('resp_preview').innerHTML = '';
+  if(comm && comm.respuesta_a) {
+    var rvA = DB.comunicados.find(function(x){return x.id===comm.respuesta_a;});
+    if(rvA) _vincularA(rvA.id);
+  }
+
+  m.classList.add('open');
+}
+
+function closeModal() { document.getElementById('modalComm').classList.remove('open'); }
+
+function _refreshDatalist(id, items) {
+  var dl = document.getElementById(id);
+  dl.innerHTML = '';
+  items.forEach(function(e){ var o=document.createElement('option'); o.value=e; dl.appendChild(o); });
+}
+
+function _getEntidades() {
+  var set = new Set(ENTIDADES_DEFAULT);
+  DB.comunicados.forEach(function(c){ if(c.origen) set.add(c.origen); if(c.destino) set.add(c.destino); });
+  return [...set].sort();
+}
+
+function _getProyectos() {
+  var set = new Set(PROYECTOS_DEFAULT);
+  DB.comunicados.forEach(function(c){ if(c.proyecto) set.add(c.proyecto); });
+  return [...set].sort();
+}
+
+function _updateRespPreview() {
+  var val = document.getElementById('f_respuesta_a').value;
+  var prev = document.getElementById('resp_preview');
+  if (!val) { prev.innerHTML = ''; return; }
+  var c = DB.comunicados.find(function(x){ return x.id === val; });
+  if (!c) { prev.innerHTML = ''; return; }
+  prev.innerHTML = '<div class="resp-link">🔗 Responde a: <strong>'+c.radicado+'</strong> — '+c.asunto+'</div>';
+}
+document.getElementById('f_respuesta_a').addEventListener('change', _updateRespPreview);
+
+// ══ MODO REITERACIÓN / NUEVO ══
+function _setModoComm(modo) {
+  DB._modoComm = modo;
+  var btnN = document.getElementById('btn_modo_nuevo');
+  var btnR = document.getElementById('btn_modo_reiter');
+  var bloq = document.getElementById('bloque_reiteracion');
+  if(modo==='nuevo'){
+    btnN.style.background='var(--blue)'; btnN.style.color='#fff'; btnN.style.borderColor='var(--blue)';
+    btnR.style.background='var(--surface2)'; btnR.style.color='var(--txt2)'; btnR.style.borderColor='var(--border)';
+    if(bloq) bloq.style.display='none';
+  } else {
+    btnR.style.background='var(--orange)'; btnR.style.color='#fff'; btnR.style.borderColor='var(--orange)';
+    btnN.style.background='var(--surface2)'; btnN.style.color='var(--txt2)'; btnN.style.borderColor='var(--border)';
+    if(bloq) bloq.style.display='block';
+    document.getElementById('f_reiter_busca').focus();
+  }
+}
+
+function _buscarReiteracion(q) {
+  var estado = document.getElementById('f_reiter_estado');
+  var preview = document.getElementById('f_reiter_preview');
+  q = (q||'').trim().toLowerCase();
+  if(!q){ estado.textContent=''; preview.innerHTML=''; return; }
+  var found = DB.comunicados.filter(function(x){ return x.radicado.toLowerCase().includes(q) || (x.asunto||'').toLowerCase().includes(q); });
+  if(!found.length){ estado.textContent='Sin resultados'; estado.style.color='var(--muted)'; preview.innerHTML=''; return; }
+  estado.textContent = found.length+' encontrado(s)'; estado.style.color='var(--green)';
+  var html='';
+  found.slice(0,4).forEach(function(x){
+    html += '<div data-rid="'+x.id+'" style="background:var(--surface);border:1.5px solid var(--border);border-radius:6px;padding:8px 10px;margin-top:4px;cursor:pointer">'
+      +'<div style="font-family:monospace;font-size:10.5px;font-weight:700;color:#2563eb">'+x.radicado+'</div>'
+      +'<div style="font-size:12px;color:#1a1d23;margin-top:2px">'+x.asunto+'</div>'
+      +'<div style="font-size:10.5px;color:#6b7280;margin-top:2px">'+x.origen+' → '+x.destino+' · '+x.proyecto+'</div>'
+      +'<button class="reiter-btn" data-rid="'+x.id+'" style="margin-top:6px;padding:4px 10px;background:#ea580c;color:#fff;border:none;border-radius:4px;font-size:10.5px;font-weight:700;cursor:pointer">🔁 Vincular como reiteración</button>'
+      +'</div>';
+  });
+  preview.innerHTML = html;
+  // Bind clicks via event delegation
+  preview.querySelectorAll('.reiter-btn').forEach(function(btn){
+    btn.addEventListener('click', function(ev){ ev.stopPropagation(); _aplicarReiteracion(btn.getAttribute('data-rid')); });
+  });
+  preview.querySelectorAll('[data-rid]').forEach(function(div){
+    div.addEventListener('mouseenter', function(){ div.style.background='#f3f4f7'; });
+    div.addEventListener('mouseleave', function(){ div.style.background='var(--surface)'; });
+  });
+}
+
+function _aplicarReiteracion(commId) {
+  var orig = DB.comunicados.find(function(x){ return x.id===commId; });
+  if(!orig) return;
+  // Autocompletar campos del original
+  document.getElementById('f_origen').value = orig.origen || '';
+  document.getElementById('f_destino').value = orig.destino || '';
+  document.getElementById('f_proyecto').value = orig.proyecto || '';
+  document.getElementById('f_contrato').value = orig.contrato || '';
+  document.getElementById('f_ambito').value = orig.ambito || 'Externo';
+  document.getElementById('f_rol').value = orig.rol || '';
+  document.getElementById('f_estado').value = 'Reiterado';
+  // Asunto sugerido
+  if(!document.getElementById('f_asunto').value) {
+    document.getElementById('f_asunto').value = '[REITERACIÓN] ' + (orig.asunto||'');
+  }
+  // Vincular
+  document.getElementById('f_respuesta_a').value = commId;
+  DB._reiterOrigId = commId;
+  // Mostrar preview
+  document.getElementById('f_reiter_preview').innerHTML = '<div style="background:var(--orange-l);border:1.5px solid #fed7aa;border-radius:var(--r);padding:8px 12px;margin-top:6px;font-size:11.5px;color:#92400e">🔁 Reiteración de <strong>'+orig.radicado+'</strong> — '+orig.asunto+'</div>';
+  document.getElementById('f_reiter_estado').textContent='✓ Vinculado'; document.getElementById('f_reiter_estado').style.color='var(--green)';
+  showToast('Datos autocompletados desde '+orig.radicado, 'ok');
+}
+
+// ══ BUSCADOR DE VINCULACIÓN ══
+function _buscarVinculo(q) {
+  var dd = document.getElementById('f_resp_dropdown');
+  q = (q||'').trim().toLowerCase();
+  if(!q){ dd.style.display='none'; return; }
+  var found = DB.comunicados.filter(function(x){ return x.radicado.toLowerCase().includes(q) || (x.asunto||'').toLowerCase().includes(q); });
+  if(!found.length){ dd.style.display='none'; return; }
+  var html = '';
+  found.slice(0,6).forEach(function(x){
+    html += '<div data-vid="'+x.id+'" style="padding:8px 12px;cursor:pointer;border-bottom:1px solid #eff1f5">'
+      +'<div style="font-family:monospace;font-size:10px;font-weight:700;color:#2563eb">'+x.radicado+'</div>'
+      +'<div style="font-size:11.5px;color:#1a1d23;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+x.asunto+'</div>'
+      +'<div style="font-size:10px;color:#9ca3af">'+x.origen+' → '+x.destino+'</div>'
+      +'</div>';
+  });
+  dd.innerHTML = html;
+  dd.querySelectorAll('[data-vid]').forEach(function(div){
+    div.addEventListener('click', function(){ _vincularA(div.getAttribute('data-vid')); });
+    div.addEventListener('mouseenter', function(){ div.style.background='#f3f4f7'; });
+    div.addEventListener('mouseleave', function(){ div.style.background=''; });
+  });
+  dd.style.display='block';
+}
+
+function _vincularA(commId) {
+  var comm = DB.comunicados.find(function(x){ return x.id===commId; });
+  if(!comm) return;
+  document.getElementById('f_respuesta_a').value = commId;
+  document.getElementById('f_resp_busca').value = comm.radicado+' — '+comm.asunto.slice(0,40);
+  document.getElementById('f_resp_dropdown').style.display='none';
+  document.getElementById('resp_preview').innerHTML = '<div style="background:var(--blue-l);border:1.5px solid #bfdbfe;border-radius:var(--r);padding:8px 12px;margin-top:4px;font-size:11.5px;color:#1e40af;display:flex;align-items:center;gap:8px">'
+    +'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>'
+    +'<div><div style="font-weight:700">Vinculado a: '+comm.radicado+'</div><div style="font-size:10.5px;color:var(--blue)">'+comm.asunto+'</div></div>'
+    +'</div>';
+  showToast('Vinculado a '+comm.radicado, 'ok');
+}
+
+function _limpiarVinculo() {
+  document.getElementById('f_respuesta_a').value='';
+  document.getElementById('f_resp_busca').value='';
+  document.getElementById('f_resp_dropdown').style.display='none';
+  document.getElementById('resp_preview').innerHTML='';
+}
+
+// Cerrar dropdown de vinculación al hacer clic afuera
+document.addEventListener('click', function(e){
+  var dd=document.getElementById('f_resp_dropdown');
+  if(dd && !dd.parentElement.contains(e.target)) dd.style.display='none';
+});
+
+function _clearCommFile(){ DB._commFile=null; var p=document.getElementById('f_doc_preview'); if(p) p.innerHTML=''; }
+function _updateDocPreview(b64, name) {
+  var p=document.getElementById('f_doc_preview'); if(!p) return;
+  if(!b64){ p.innerHTML=''; return; }
+  p.innerHTML='<div style="display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:5px 10px;margin-top:4px">'
+    +'<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--blue)" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+    +'<span style="font-size:11px;flex:1;overflow:hidden;text-overflow:ellipsis;color:var(--txt)">'+(name||'Documento adjunto')+'</span>'
+    +'<button onclick="_clearCommFile()" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:14px">×</button>'
+    +'</div>';
+}
+function _commFileChange(input){
+  var f=input.files[0]; if(!f) return;
+  var r=new FileReader(); r.onload=function(e){
+    DB._commFile={b64:e.target.result,name:f.name,mime:f.type};
+    _updateDocPreview(e.target.result, f.name);
+  }; r.readAsDataURL(f);
+}
+
+function guardarComm() {
+  var rad = document.getElementById('f_radicado').value.trim();
+  var tipo = document.getElementById('f_tipo').value;
+  var origen = document.getElementById('f_origen').value.trim();
+  var destino = document.getElementById('f_destino').value.trim();
+  var asunto = document.getElementById('f_asunto').value.trim();
+  if (!rad) { showToast('El N° Radicado es obligatorio', 'error'); return; }
+  if (!tipo) { showToast('Selecciona el tipo de comunicado', 'error'); return; }
+  if (!origen) { showToast('El origen es obligatorio', 'error'); return; }
+  if (!destino) { showToast('El destino es obligatorio', 'error'); return; }
+  if (!asunto) { showToast('El asunto es obligatorio', 'error'); return; }
+
+  // Check duplicate radicado
+  var dup = DB.comunicados.find(function(c){ return c.radicado===rad && (!DB._editId || c.id!==DB._editId); });
+  if (dup) { showToast('Ya existe un comunicado con ese N° Radicado', 'error'); return; }
+
+  var obj = {
+    id: DB._editId || ('COMM_'+Date.now()),
+    radicado: rad, tipo: tipo,
+    rol: document.getElementById('f_rol').value,
+    doc_b64: (DB._commFile ? DB._commFile.b64 : (DB._editId ? (DB.comunicados.find(x=>x.id===DB._editId)||{}).doc_b64||null : null)),
+    doc_name: (DB._commFile ? DB._commFile.name : null),
+    es_reiteracion: DB._modoComm==='reiteracion',
+    ambito: document.getElementById('f_ambito').value,
+    fecha_emision: document.getElementById('f_fecha_emision').value,
+    fecha_recepcion: document.getElementById('f_fecha_recepcion').value,
+    origen: origen, destino: destino,
+    proyecto: document.getElementById('f_proyecto').value.trim(),
+    contrato: document.getElementById('f_contrato').value.trim(),
+    asunto: asunto,
+    descripcion: document.getElementById('f_descripcion').value.trim(),
+    estado: document.getElementById('f_estado').value,
+    respuesta_a: document.getElementById('f_respuesta_a').value || null,
+    created_at: DB._editId ? (DB.comunicados.find(c=>c.id===DB._editId)||{}).created_at : Date.now()
+  };
+
+  if (DB._editId) {
+    var idx = DB.comunicados.findIndex(c=>c.id===DB._editId);
+    if (idx>=0) DB.comunicados[idx] = obj;
+  } else {
+    DB.comunicados.push(obj);
+  }
+
+  closeModal();
+  renderTable();
+  renderTimeline();
+  _updateFiltros();
+  showToast(DB._editId ? '✅ Comunicado actualizado' : '✅ Comunicado registrado', 'ok');
+}
+
+function deleteComm(id) {
+  if (!confirm('¿Eliminar este comunicado?')) return;
+  DB.comunicados = DB.comunicados.filter(c=>c.id!==id);
+  renderTable();
+  renderTimeline();
+  _updateFiltros();
+  closeDetail();
+  showToast('Comunicado eliminado');
+}
+
+// ════════════════════════════════════════════
+//  TABLA
+// ════════════════════════════════════════════
+// ══ FILTRO POR ENCABEZADO ══
+function _thClick(col, thEl) {
+  // Si hay dropdown abierto del mismo col, cerrar
+  var existing = document.getElementById('colFilterDropdown');
+  if(existing){ existing.remove(); if(existing._col===col) return; }
+
+  // Valores únicos de esa columna
+  var vals = [];
+  DB.comunicados.forEach(function(c){ var v=c[col]||''; if(v&&!vals.includes(v)) vals.push(v); });
+  vals.sort();
+
+  var curVal = document.getElementById('f'+_capitalize(col)) ? document.getElementById('f'+_capitalize(col)).value : '';
+
+  // Crear dropdown
+  var dd = document.createElement('div');
+  dd.id = 'colFilterDropdown'; dd._col = col;
+  var rect = thEl.getBoundingClientRect();
+  dd.style.cssText = 'position:fixed;top:'+(rect.bottom+2)+'px;left:'+rect.left+'px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;box-shadow:var(--sh3);z-index:8000;min-width:180px;max-height:240px;overflow-y:auto;font-size:12px';
+  dd.innerHTML = '';
+
+  // Opción "Todos"
+  var allDiv = document.createElement('div');
+  allDiv.textContent = '— Todos —';
+  allDiv.style.cssText = 'padding:7px 12px;cursor:pointer;font-weight:700;color:var(--blue);border-bottom:1px solid var(--border-light)';
+  allDiv.addEventListener('click', function(){ _setColFilter(col,''); dd.remove(); });
+  allDiv.addEventListener('mouseenter', function(){ allDiv.style.background='var(--surface2)'; });
+  allDiv.addEventListener('mouseleave', function(){ allDiv.style.background=''; });
+  dd.appendChild(allDiv);
+
+  vals.forEach(function(v){
+    var d2 = document.createElement('div');
+    d2.style.cssText = 'padding:7px 12px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px'+(v===curVal?';background:var(--blue-l);color:var(--blue);font-weight:700':'');
+    var count = DB.comunicados.filter(function(c){ return c[col]===v; }).length;
+    d2.innerHTML = '<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+v+'</span><span style="font-size:10px;color:var(--muted);flex-shrink:0">'+count+'</span>';
+    d2.addEventListener('click', function(){ _setColFilter(col,v); dd.remove(); });
+    d2.addEventListener('mouseenter', function(){ if(v!==curVal) d2.style.background='var(--surface2)'; });
+    d2.addEventListener('mouseleave', function(){ if(v!==curVal) d2.style.background=''; });
+    dd.appendChild(d2);
+  });
+
+  document.body.appendChild(dd);
+  // Cerrar al clicar afuera
+  setTimeout(function(){
+    document.addEventListener('click', function _close(e){
+      if(!dd.contains(e.target) && e.target!==thEl){ dd.remove(); document.removeEventListener('click',_close); }
+    });
+  }, 10);
+}
+
+function _capitalize(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+
+function _setColFilter(col, val) {
+  var id = 'f'+_capitalize(col);
+  var el = document.getElementById(id);
+  if(el) el.value = val;
+  _updateActiveFiltersBar();
+  renderTable();
+  // Actualizar indicador en th
+  document.querySelectorAll('#commsTableHead th[data-col]').forEach(function(th){
+    var c2 = th.getAttribute('data-col');
+    var fEl = document.getElementById('f'+_capitalize(c2));
+    var fVal = fEl ? fEl.value : '';
+    var baseTxt = th.textContent.replace(/[▾✓].*/,'').trim();
+    th.textContent = fVal ? baseTxt+' ✓' : baseTxt;
+    th.style.color = fVal ? 'var(--blue)' : '';
+  });
+}
+
+function _updateActiveFiltersBar() {
+  var bar = document.getElementById('activeFiltersBar');
+  if(!bar) return;
+  bar.innerHTML = '';
+  var cols = ['tipo','origen','destino','estado','proyecto','rol','ambito'];
+  var labels = {tipo:'Tipo',origen:'Origen',destino:'Destino',estado:'Estado',proyecto:'Proyecto',rol:'Rol',ambito:'Ámbito'};
+  cols.forEach(function(col){
+    var el = document.getElementById('f'+_capitalize(col));
+    var val = el ? el.value : '';
+    if(!val) return;
+    var chip = document.createElement('div');
+    chip.style.cssText = 'display:inline-flex;align-items:center;gap:4px;background:var(--blue-l);color:var(--blue);padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700';
+    chip.innerHTML = labels[col]+': '+val;
+    var x = document.createElement('button');
+    x.textContent='×'; x.style.cssText='background:none;border:none;cursor:pointer;color:var(--blue);font-size:13px;padding:0 0 0 2px;line-height:1';
+    x.addEventListener('click', function(){ _setColFilter(col,''); });
+    chip.appendChild(x);
+    bar.appendChild(chip);
+  });
+}
+
+function sortBy(f) {
+  if (DB._sortField===f) DB._sortDir *= -1;
+  else { DB._sortField=f; DB._sortDir=-1; }
+  renderTable();
+}
+
+function _filtered() {
+  var q = (document.getElementById('searchInput').value||'').toLowerCase();
+  var fTipo = document.getElementById('fTipo').value;
+  var fOrig = document.getElementById('fOrigen').value;
+  var fDest = document.getElementById('fDestino').value;
+  var fEst = document.getElementById('fEstado').value;
+  var fProy = document.getElementById('fProyecto').value;
+  var fRol = document.getElementById('fRol') ? document.getElementById('fRol').value : '';
+  var fAmb = document.getElementById('fAmbito') ? document.getElementById('fAmbito').value : '';
+  return DB.comunicados.filter(function(c){
+    if (fTipo && c.tipo!==fTipo) return false;
+    if (fOrig && c.origen!==fOrig) return false;
+    if (fDest && c.destino!==fDest) return false;
+    if (fEst && c.estado!==fEst) return false;
+    if (fProy && c.proyecto!==fProy) return false;
+    if (fRol && c.rol!==fRol) return false;
+    if (fAmb && c.ambito!==fAmb) return false;
+    if (q) {
+      var hay = (c.radicado+' '+c.asunto+' '+c.origen+' '+c.destino+' '+c.proyecto+' '+(c.rol||'')).toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  }).sort(function(a,b){
+    var va=a[DB._sortField]||'', vb=b[DB._sortField]||'';
+    return va<vb?-DB._sortDir:va>vb?DB._sortDir:0;
+  });
+}
+
+function filtrar() { renderTable(); }
+
+function renderTable() {
+  var data = _filtered();
+  document.getElementById('countLabel').textContent = data.length + ' de ' + DB.comunicados.length + ' comunicados';
+  var tbody = document.getElementById('tablebody');
+  if (!data.length) {
+    tbody.innerHTML = '<tr><td colspan="12" class="empty-state"><svg viewBox="0 0 24 24"><path d="M4 4h16v12H4z"/><path d="M8 20h8M12 16v4"/><path d="M4 8l8 5 8-5"/></svg><p style="font-size:13px;color:var(--muted)">Sin comunicados. Usa "Nuevo Comunicado" para registrar el primero.</p></td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(function(c){
+    var tipoBadge = c.tipo==='Entrante'
+      ? '<span class="badge badge-in">↓ Entrante</span>'
+      : '<span class="badge badge-out">↑ Saliente</span>';
+    var ambitoBadge = c.ambito==='Interno'
+      ? '<span class="badge badge-int">INT</span>'
+      : '<span class="badge badge-ext">EXT</span>';
+    var rolColor = c.rol==='Obra'?'var(--orange)':c.rol==='Interventoría'?'var(--blue)':c.rol==='Supervisión'?'var(--purple)':'var(--muted)';
+    var rolBadge = c.rol ? '<span class="badge" style="background:'+rolColor+'22;color:'+rolColor+'">'+c.rol+'</span>' : '<span style="color:var(--muted)">—</span>';
+    var estadoBadge = c.estado==='Pendiente respuesta'
+      ? '<span class="badge badge-pend" style="font-size:9px">⏳ Pendiente</span>'
+      : c.estado==='Respondido'
+      ? '<span class="badge badge-done" style="font-size:9px">✓ Respondido</span>'
+      : c.estado==='Reiterado'
+      ? '<span class="badge badge-resp" style="font-size:9px">🔁 Reiterado</span>'
+      : c.estado==='Archivado'
+      ? '<span class="badge badge-int" style="font-size:9px">📁 Archivado</span>'
+      : '<span style="color:var(--muted);font-size:11px">—</span>';
+    var respA = c.respuesta_a ? (DB.comunicados.find(x=>x.id===c.respuesta_a)||{}).radicado||'—' : '—';
+    var respCount = DB.comunicados.filter(x=>x.respuesta_a===c.id).length;
+    var isSelected = DB._selectedId === c.id;
+    return '<tr onclick="selectComm(\''+c.id+'\')" data-id="'+c.id+'" style="cursor:pointer'+(isSelected?';background:var(--blue-l)':'')+'">'
+      +'<td title="'+c.proyecto+'">'+c.proyecto+'</td>'
+      +'<td><span style="font-family:monospace;font-size:10px;color:var(--txt2)">'+c.contrato+'</span></td>'
+      +'<td>'+rolBadge+'</td>'
+      +'<td title="'+c.radicado+'"><span class="mono">'+c.radicado+'</span>'+(respCount?'<span class="count-chip">'+respCount+'↩</span>':'')+'</td>'
+      +'<td>'+fmtDate(c.fecha_emision)+'</td>'
+      +'<td>'+fmtDate(c.fecha_recepcion)+'</td>'
+      +'<td>'+tipoBadge+'</td>'
+      +'<td>'+ambitoBadge+'</td>'
+      +'<td title="'+c.origen+'">'+c.origen+'</td>'
+      +'<td title="'+c.destino+'">'+c.destino+'</td>'
+      +'<td title="'+c.asunto+'">'+c.asunto+'</td>'
+      +'<td>'+estadoBadge+'</td>'
+      +'</tr>';
+  }).join('');
+  // Event delegation para botones de doc
+  tbody.querySelectorAll('.doc-view-btn').forEach(function(btn){
+    btn.addEventListener('click', function(e){ e.stopPropagation(); _verDocComm(btn.getAttribute('data-cid')); });
+  });
+}
+
+// ── Detail Panel ──
+function switchDpTab(tab, btn) {
+  DB._dpTab = tab;
+  ['detalle','timeline','correl'].forEach(function(t){
+    var pane = document.getElementById('dp_pane_'+t);
+    var tbtn = document.getElementById('dptab_'+t);
+    if(pane) { if(t===tab){ pane.style.display = t==='correl'?'block':'flex'; if(t==='detalle') pane.style.flexDirection='column'; } else { pane.style.display='none'; } }
+    if(tbtn) {
+      tbtn.style.color = t===tab ? 'var(--blue)' : 'var(--txt2)';
+      tbtn.style.fontWeight = t===tab ? '700' : '600';
+      tbtn.style.borderBottom = t===tab ? '2px solid var(--blue)' : '2px solid transparent';
+    }
+  });
+  if(tab==='correl') setTimeout(renderCorrelacionPanel, 50);
+}
+
+function renderCorrelacionPanel() {
+  var canvas = document.getElementById('correlCanvas');
+  if (!canvas) return;
+  var container = document.getElementById('dp_pane_correl');
+  if (!container || container.style.display==='none') return;
+  canvas.width = container.offsetWidth;
+  canvas.height = container.offsetHeight;
+  _drawCorrelacion(canvas, (document.getElementById('correl_filtro')||{}).value||'all');
+}
+
+function _drawCorrelacion(canvas, filt) {
+  // ── Árbol de flujo radial: nodo central (entidad más conectada) con ramas hacia destinos ──
+  var ctx = canvas.getContext('2d');
+  var W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  var data = filt==='all' ? DB.comunicados : DB.comunicados.filter(function(x){ return x.tipo===filt; });
+  if(!data.length){ ctx.fillStyle='#9ca3af'; ctx.font='11px DM Sans'; ctx.textAlign='center'; ctx.fillText('Sin datos',W/2,H/2); return; }
+
+  // Contar conexiones por entidad
+  var counts={};
+  data.forEach(function(d){ counts[d.origen]=(counts[d.origen]||0)+1; counts[d.destino]=(counts[d.destino]||0)+1; });
+  var allEnts = Object.keys(counts).sort(function(a,b){ return counts[b]-counts[a]; });
+  var selComm = DB._selectedId ? DB.comunicados.find(function(x){ return x.id===DB._selectedId; }) : null;
+
+  // Flujos entre pares
+  var flows={};
+  data.forEach(function(d){
+    var k=d.origen+'|||'+d.destino;
+    if(!flows[k]) flows[k]={from:d.origen,to:d.destino,count:0};
+    flows[k].count++;
+  });
+
+  // Paleta por entidad
+  var PALETTE=['#2563eb','#ea580c','#16a34a','#7c3aed','#d97706','#0891b2','#dc2626','#db2777'];
+  var colorOf={}; allEnts.forEach(function(e,i){ colorOf[e]=PALETTE[i%PALETTE.length]; });
+
+  // Posición en árbol radial: entidad más conectada al centro
+  var cx=W/2, cy=H/2;
+  var maxR = Math.min(W,H)*0.40;
+  var nodePos={};
+
+  if(allEnts.length===1){
+    nodePos[allEnts[0]] = {x:cx,y:cy,r:22};
+  } else {
+    // Entidad central = la más conectada
+    var center = allEnts[0];
+    nodePos[center] = {x:cx, y:cy, r:22+Math.sqrt(counts[center])*3};
+    var others = allEnts.slice(1);
+    others.forEach(function(e,i){
+      var angle = (i/others.length)*Math.PI*2 - Math.PI/2;
+      // Distancia proporcional (más conectadas más cerca)
+      var dist = maxR*(0.55 + 0.45*(1 - counts[e]/counts[center]));
+      nodePos[e] = {
+        x: cx + Math.cos(angle)*dist,
+        y: cy + Math.sin(angle)*dist,
+        r: 12 + Math.sqrt(counts[e])*2.5
+      };
+    });
+  }
+
+  // Fondo tenue de arcos entre todos los nodos
+  // Dibujar arcos/flujos
+  Object.values(flows).forEach(function(f){
+    var nF=nodePos[f.from], nT=nodePos[f.to]; if(!nF||!nT) return;
+    var isSel = selComm && (selComm.origen===f.from&&selComm.destino===f.to || selComm.origen===f.to&&selComm.destino===f.from);
+    var alpha = selComm?(isSel?0.9:0.12):0.55;
+    var lw = Math.max(1.5, Math.min(f.count*2.5,10));
+    var col = colorOf[f.from]||'#2563eb';
+    // Curva cuadrática
+    var mx=(nF.x+nT.x)/2, my=(nF.y+nT.y)/2;
+    var dx=nT.x-nF.x, dy=nT.y-nF.y, len=Math.sqrt(dx*dx+dy*dy)||1;
+    var bx=mx - (dy/len)*Math.min(len*0.18,32), by=my + (dx/len)*Math.min(len*0.18,32);
+    ctx.save(); ctx.globalAlpha=alpha;
+    ctx.strokeStyle=col; ctx.lineWidth=Math.max(0.8, Math.min(f.count*1.2,4)); ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(nF.x,nF.y); ctx.quadraticCurveTo(bx,by,nT.x,nT.y); ctx.stroke();
+    // Flecha pequeña
+    var ang=Math.atan2(nT.y-by,nT.x-bx);
+    var ex2=nT.x-(dx/len)*nT.r, ey2=nT.y-(dy/len)*nT.r;
+    ctx.fillStyle=col;
+    ctx.beginPath(); ctx.moveTo(ex2+Math.cos(ang)*7,ey2+Math.sin(ang)*7);
+    ctx.lineTo(ex2+Math.cos(ang+2.4)*5,ey2+Math.sin(ang+2.4)*5);
+    ctx.lineTo(ex2+Math.cos(ang-2.4)*5,ey2+Math.sin(ang-2.4)*5); ctx.fill();
+    // Conteo — solo si hay más de 1
+    if(f.count>1){ ctx.fillStyle='#6b7280'; ctx.font='9px DM Mono'; ctx.textAlign='center'; ctx.fillText(f.count,bx,by-4); }
+    ctx.restore();
+  });
+
+  // Dibujar nodos
+  allEnts.forEach(function(e){
+    var nd=nodePos[e]; if(!nd) return;
+    var col=colorOf[e]||'#2563eb';
+    var isSel = selComm&&(selComm.origen===e||selComm.destino===e);
+    var alpha = selComm?(isSel?1:0.40):1;
+    ctx.save(); ctx.globalAlpha=isSel?1:selComm?0.45:1;
+    // Círculo sin relleno — solo borde delgado
+    ctx.beginPath(); ctx.arc(nd.x,nd.y,nd.r,0,Math.PI*2);
+    ctx.fillStyle=isSel?col+'18':'rgba(255,255,255,0.7)';
+    ctx.fill();
+    ctx.strokeStyle=col; ctx.lineWidth=isSel?2:1.2; ctx.stroke();
+    // Texto negro debajo del nodo
+    ctx.fillStyle='#1a1d23'; ctx.font=(isSel?'bold ':'')+(nd.r>18?'11':'10')+'px DM Sans';
+    ctx.textAlign='center'; ctx.textBaseline='top';
+    var label=e.length>10?e.slice(0,9)+'…':e;
+    ctx.fillText(label, nd.x, nd.y+nd.r+4);
+    // Conteo pequeño dentro del círculo
+    ctx.fillStyle=col; ctx.font='bold 9px DM Mono'; ctx.textBaseline='middle';
+    ctx.fillText(counts[e], nd.x, nd.y);
+    ctx.restore();
+    nd._label=e;
+  });
+
+  // Tooltip
+  canvas._nodePos=nodePos; canvas._counts=counts;
+  canvas.onmousemove=function(ev){
+    var rect=canvas.getBoundingClientRect(),mx=ev.clientX-rect.left,my=ev.clientY-rect.top;
+    var tip=document.getElementById('correlTooltip'); var hit=null;
+    Object.values(nodePos).forEach(function(n){ if(Math.sqrt((mx-n.x)**2+(my-n.y)**2)<n.r+5) hit=n; });
+    if(hit){
+      var inn=data.filter(function(d){ return d.destino===hit._label; }).length;
+      var out=data.filter(function(d){ return d.origen===hit._label; }).length;
+      tip.innerHTML='<b>'+hit._label+'</b><br>↓ '+inn+' recibidos · ↑ '+out+' enviados';
+      tip.style.left=(mx+12)+'px'; tip.style.top=(my-28)+'px'; tip.style.opacity='1';
+    } else tip.style.opacity='0';
+  };
+  canvas.onmouseleave=function(){ var t=document.getElementById('correlTooltip'); if(t) t.style.opacity='0'; };
+}
+function selectComm(id) {
+  DB._selectedId = id;
+  // Highlight fila en tabla
+  document.querySelectorAll('#tablebody tr').forEach(function(tr){
+    tr.style.background = tr.dataset.id===id ? 'var(--blue-l)' : '';
+  });
+  var c = DB.comunicados.find(x=>x.id===id);
+  if (!c) return;
+  document.getElementById('dp_num').textContent = c.radicado;
+  var tipoBadge2 = c.tipo==='Entrante'?'<span class="badge badge-in" style="font-size:9.5px">↓ Entrante</span>':'<span class="badge badge-out" style="font-size:9.5px">↑ Saliente</span>';
+  var amb2 = '<span class="badge '+(c.ambito==='Interno'?'badge-int':'badge-ext')+'" style="font-size:9.5px">'+c.ambito+'</span>';
+  document.getElementById('dp_fecha').innerHTML = '<span style="font-size:11px">'+fmtDate(c.fecha_emision)+(c.fecha_recepcion?' <span style="color:var(--muted)">→</span> '+fmtDate(c.fecha_recepcion):'')+'</span>'
+    +'<div style="margin-top:4px;display:flex;gap:4px">'+tipoBadge2+amb2+'</div>';
+  var respuestas = DB.comunicados.filter(x=>x.respuesta_a===id);
+  var respA = c.respuesta_a ? DB.comunicados.find(x=>x.id===c.respuesta_a) : null;
+  var estBadge2 = c.estado==='Pendiente respuesta'?'badge-pend':c.estado==='Respondido'?'badge-done':'badge-int';
+  var body = ''
+    +'<div class="dp-section"><div class="dp-lbl">Origen → Destino</div><div class="dp-val"><b>'+c.origen+'</b><span style="color:var(--muted);margin:0 5px">→</span><b>'+c.destino+'</b></div></div>'
+    +'<div class="dp-section"><div class="dp-lbl">Proyecto · Contrato · Rol</div><div class="dp-val" style="display:flex;gap:5px;flex-wrap:wrap">'
+    +(c.proyecto?'<span style="background:var(--blue-l);color:var(--blue);padding:1px 8px;border-radius:4px;font-size:11px;font-weight:700">'+c.proyecto+'</span>':'')
+    +(c.contrato?'<span style="font-family:monospace;font-size:10.5px;color:var(--txt2)">'+c.contrato+'</span>':'')
+    +(c.rol?'<span style="background:var(--surface2);color:var(--txt2);padding:1px 7px;border-radius:4px;font-size:10.5px">'+c.rol+'</span>':'')
+    +'</div></div>'
+    +'<div class="dp-section"><div class="dp-lbl">Asunto</div><div class="dp-val" style="font-size:12.5px;line-height:1.5">'+c.asunto+'</div></div>'
+    +(c.descripcion?'<div class="dp-section"><div class="dp-lbl">Descripción</div><div class="dp-val" style="font-size:11.5px;color:var(--txt2);line-height:1.6">'+c.descripcion+'</div></div>':'')
+    +'<div class="dp-section"><div class="dp-lbl">Estado</div><div class="dp-val"><span class="badge '+estBadge2+'">'+c.estado+'</span></div></div>';
+  if (respA) body += '<div class="dp-section"><div class="dp-lbl">Responde a</div><div class="dp-resp-item" onclick="selectComm(\''+respA.id+'\')">🔗 <b>'+respA.radicado+'</b> — '+respA.asunto+'</div></div>';
+  if (respuestas.length) body += '<div class="dp-section"><div class="dp-lbl">Respuestas ('+respuestas.length+')</div><div class="dp-responses">'+respuestas.map(function(r){ return '<div class="dp-resp-item" onclick="selectComm(\''+r.id+'\')">↩ <b>'+r.radicado+'</b> — '+r.asunto+'</div>'; }).join('')+'</div></div>';
+  // Botones de acción — data-attrs para evitar comillas anidadas
+  body += '<div style="display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border-light)">'
+    +(c.doc_b64?'<button class="dp-act-doc" data-id="'+id+'" style="flex:1;padding:7px;background:var(--blue-l);color:var(--blue);border:1px solid #bfdbfe;border-radius:var(--r);font-size:11.5px;font-weight:700;cursor:pointer">📎 Ver doc</button>':'')
+    +'<button class="dp-act-edit" data-id="'+id+'" style="flex:1;padding:7px;background:var(--surface2);color:var(--txt2);border:1.5px solid var(--border);border-radius:var(--r);font-size:11.5px;font-weight:600;cursor:pointer">✏️ Editar</button>'
+    +'<button class="dp-act-del" data-id="'+id+'" style="padding:7px 10px;background:var(--red-l);color:var(--red);border:1px solid #fecaca;border-radius:var(--r);font-size:11.5px;cursor:pointer">🗑</button>'
+    +'</div>';
+  document.getElementById('dp_body').innerHTML = body;
+  // Event delegation acciones
+  var dpBody = document.getElementById('dp_body');
+  var docBtn = dpBody.querySelector('.dp-act-doc');
+  var editBtn = dpBody.querySelector('.dp-act-edit');
+  var delBtn = dpBody.querySelector('.dp-act-del');
+  if(docBtn) docBtn.addEventListener('click', function(){ _verDocComm(docBtn.getAttribute('data-id')); });
+  if(editBtn) editBtn.addEventListener('click', function(){ openModal(editBtn.getAttribute('data-id')); });
+  if(delBtn) delBtn.addEventListener('click', function(){ deleteComm(delBtn.getAttribute('data-id')); });
+  document.getElementById('detailPanel').classList.add('open');
+  var curTab = DB._dpTab || 'detalle';
+  if (curTab === 'timeline') renderTimeline();
+  if (curTab === 'correl') setTimeout(renderCorrelacionPanel, 50);
+}
+
+function closeDetail() { document.getElementById('detailPanel').classList.remove('open'); }
+
+// ════════════════════════════════════════════
+//  LÍNEA DE TIEMPO DEL COMUNICADO
+// ════════════════════════════════════════════
+function renderTimeline() {
+  var commId = DB._selectedId;
+  var body = document.getElementById('timelineBody');
+  if (!commId) {
+    body.innerHTML = '<div class="tl-line"></div><div style="color:var(--muted);font-size:11.5px;padding:20px 8px;text-align:center;line-height:1.6">Selecciona un comunicado para ver su línea de tiempo y registrar eventos.</div>';
+    return;
+  }
+  var comm = DB.comunicados.find(function(x){ return x.id===commId; });
+  if (!comm) { body.innerHTML='<div class="tl-line"></div>'; return; }
+  var eventos = (DB.eventos && DB.eventos[commId]) ? DB.eventos[commId] : [];
+  var cadena = _buildCadena(commId);
+  var html = '<div class="tl-line"></div>';
+  // Dibujar la cadena de comunicados relacionados
+  cadena.forEach(function(relComm){
+    html += _tlEventoComm(relComm, relComm.tipo==='Entrante'?'var(--blue)':'var(--orange)', relComm.id===commId);
+    // Eventos manuales registrados en este comunicado
+    if(relComm.id===commId && eventos.length) {
+      eventos.forEach(function(ev){ html += _tlEventoManual(ev, commId); });
+    }
+  });
+  html += '<div style="padding:8px 0 4px"><button onclick="_openEventoModal(\''+commId+'\')" style="width:100%;padding:8px;background:var(--blue-l);color:var(--blue);border:1.5px dashed var(--blue);border-radius:var(--r);font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>+ Registrar evento / respuesta</button></div>';
+  body.innerHTML = html;
+  // Event delegation: botones soporte
+  body.querySelectorAll('.ev-soporte-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      _verSoporteEvento(btn.getAttribute('data-evid'), btn.getAttribute('data-cid'));
+    });
+  });
+  // Event delegation: colapsar/expandir eventos
+  body.querySelectorAll('[data-toggle-ev]').forEach(function(el){
+    el.addEventListener('click', function(){ _toggleEvento(el.getAttribute('data-toggle-ev')); });
+  });
+  // Event delegation: eliminar evento
+  body.querySelectorAll('[data-del-ev]').forEach(function(el){
+    el.addEventListener('click', function(e){
+      e.stopPropagation();
+      _deleteEvento(el.getAttribute('data-del-cid'), el.getAttribute('data-del-ev'));
+    });
+  });
+}
+
+function _buildCadena(commId) {
+  var visited = new Set(), result = [];
+  function walk(id) {
+    if(visited.has(id)) return; visited.add(id);
+    var comm = DB.comunicados.find(x=>x.id===id); if(!comm) return;
+    result.push(comm);
+    DB.comunicados.filter(x=>x.respuesta_a===id).forEach(x=>walk(x.id));
+  }
+  var root = DB.comunicados.find(x=>x.id===commId);
+  while(root && root.respuesta_a) root = DB.comunicados.find(x=>x.id===root.respuesta_a);
+  if(root) walk(root.id); else walk(commId);
+  return result.sort(function(a,b){ return (a.fecha_emision||'') < (b.fecha_emision||'') ? -1 : 1; });
+}
+
+function _tlEventoComm(comm, dotColor, isSelected) {
+  var tipoBadge = comm.tipo==='Entrante'?'<span class="badge badge-in" style="font-size:9px">↓ Entr.</span>':'<span class="badge badge-out" style="font-size:9px">↑ Sal.</span>';
+  var estBadge = comm.estado==='Pendiente respuesta'?'badge-pend':comm.estado==='Respondido'?'badge-done':'badge-int';
+  return '<div class="tl-item">'
+    +'<div class="tl-dot" style="background:'+dotColor+';'+(isSelected?'width:16px;height:16px;left:-28px;border:2.5px solid #fff;box-shadow:0 0 0 2px '+dotColor:'')+'"></div>'
+    +'<div style="background:var(--surface);border:1.5px solid '+(isSelected?'var(--blue)':'var(--border)')+';border-radius:8px;padding:9px 11px;cursor:pointer" onclick="selectComm(\''+comm.id+'\')">'
+    +'<div style="display:flex;justify-content:space-between;gap:6px;margin-bottom:4px">'
+    +'<span style="font-family:monospace;font-size:10px;font-weight:700;color:var(--blue)">'+comm.radicado+'</span>'
+    +'<span style="font-size:9.5px;color:var(--muted)">'+fmtDate(comm.fecha_emision)+'</span>'
+    +'</div>'
+    +'<div style="font-size:11.5px;font-weight:600;color:var(--txt);line-height:1.4;margin-bottom:4px">'+comm.asunto+'</div>'
+    +'<div style="display:flex;gap:4px;flex-wrap:wrap">'
+    +tipoBadge+'<span style="font-size:9.5px;color:var(--txt2)"><b>'+comm.origen+'</b>→<b>'+comm.destino+'</b></span>'
+    +'<span class="badge '+estBadge+'" style="font-size:9px">'+comm.estado+'</span>'
+    +'</div></div></div>';
+}
+
+function _tlEventoManual(ev, commId) {
+  var tipoIcon = ev.tipo==='correo'?'✉️':ev.tipo==='oficio'?'📄':'📌';
+  var collapsed = ev._collapsed !== false;
+  return '<div class="tl-item" id="ev_'+ev.id+'">'
+    +'<div class="tl-dot" style="background:var(--purple);width:12px;height:12px;left:-26px"></div>'
+    +'<div style="background:var(--purple-l);border:1.5px solid #ddd6fe;border-radius:8px;overflow:hidden">'
+    +'<div style="padding:7px 10px;display:flex;align-items:center;gap:7px;cursor:pointer" data-toggle-ev="'+ev.id+'">'
+    +'<span style="font-size:12px;flex-shrink:0">'+tipoIcon+'</span>'
+    +'<div style="flex:1;min-width:0"><div style="font-size:10px;font-weight:700;color:#7c3aed;font-family:monospace">'+ev.radicado_ref+'</div>'
+    +'<div style="font-size:11px;font-weight:600;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+ev.asunto+'</div></div>'
+    +'<span style="font-size:9.5px;color:var(--muted);white-space:nowrap;flex-shrink:0">'+fmtDate(ev.fecha)+'</span>'
+    +'<span id="ev_arr_'+ev.id+'" style="color:var(--muted);font-size:11px;transition:transform .15s;transform:'+(collapsed?'rotate(-90deg)':'rotate(0deg)')+';flex-shrink:0">▾</span>'
+    +'<button data-del-ev="'+ev.id+'" data-del-cid="'+commId+'" style="background:none;border:none;cursor:pointer;color:var(--muted);font-size:13px;padding:0 2px;flex-shrink:0">×</button>'
+    +'</div>'
+    +'<div id="ev_body_'+ev.id+'" style="display:'+(collapsed?'none':'block')+';padding:0 10px 8px;border-top:1px solid #ede9fe">'
+    +(ev.descripcion?'<div style="font-size:11px;color:var(--txt2);margin-top:6px;line-height:1.5">'+ev.descripcion+'</div>':'')
+    +(ev.soporte_b64?'<button class="ev-soporte-btn" data-evid="'+ev.id+'" data-cid="'+commId+'" style="margin-top:7px;padding:4px 10px;background:var(--purple-l);color:#7c3aed;border:1px solid #ddd6fe;border-radius:5px;font-size:10px;font-weight:700;cursor:pointer">📎 Ver soporte</button>':'')
+    +'</div></div></div>';
+}
+
+function _toggleEvento(evId) {
+  var b=document.getElementById('ev_body_'+evId), a=document.getElementById('ev_arr_'+evId);
+  if(!b) return; var h=b.style.display==='none'; b.style.display=h?'block':'none';
+  if(a) a.style.transform=h?'rotate(0deg)':'rotate(-90deg)';
+}
+function _deleteEvento(commId, evId) {
+  if(!confirm('¿Eliminar este evento?')) return;
+  DB.eventos[commId]=(DB.eventos[commId]||[]).filter(e=>e.id!==evId); renderTimeline();
+}
+function _verSoporteEvento(evId, commId) {
+  var ev=(DB.eventos[commId]||[]).find(e=>e.id===evId); if(!ev||!ev.soporte_b64) return;
+  _abrirVisorDoc(ev.soporte_b64, ev.soporte_name||'soporte');
+}
+
+function _abrirVisorDoc(b64, name) {
+  var existing = document.getElementById('modalVisorDoc');
+  if(existing) existing.remove();
+  var m = document.createElement('div');
+  m.id = 'modalVisorDoc';
+  m.style.cssText = 'position:fixed;inset:0;background:rgba(10,15,30,.75);backdrop-filter:blur(6px);z-index:19999;display:flex;align-items:center;justify-content:center';
+  m.addEventListener('click', function(e){ if(e.target===m) m.remove(); });
+  var isImg = b64.startsWith('data:image') || /\.(png|jpg|jpeg|gif|webp)$/i.test(name||'');
+  var isPdf = b64.includes('application/pdf') || /\.pdf$/i.test(name||'');
+  var inner = document.createElement('div');
+  inner.style.cssText = 'position:relative;max-width:92vw';
+  // Close button
+  var closeBtn = document.createElement('button');
+  closeBtn.textContent = '✕';
+  closeBtn.style.cssText = 'position:absolute;top:-14px;right:-14px;background:var(--txt);color:#fff;border:none;border-radius:50%;width:30px;height:30px;font-size:16px;cursor:pointer;z-index:1;display:flex;align-items:center;justify-content:center;box-shadow:var(--sh2)';
+  closeBtn.addEventListener('click', function(){ m.remove(); });
+  inner.appendChild(closeBtn);
+  // Container
+  var box = document.createElement('div');
+  box.style.cssText = 'background:rgba(0,0,0,.65);border-radius:10px;padding:4px;box-shadow:0 8px 32px rgba(0,0,0,.4)';
+  // Header
+  var hdr = document.createElement('div');
+  hdr.style.cssText = 'padding:6px 12px;display:flex;justify-content:space-between;align-items:center;margin-bottom:2px';
+  var nameSpan = document.createElement('span');
+  nameSpan.textContent = name||'documento';
+  nameSpan.style.cssText = 'color:#fff;font-size:12px;font-weight:700;font-family:monospace';
+  var dlLink = document.createElement('a');
+  dlLink.href = b64; dlLink.download = name||'archivo'; dlLink.textContent = '⬇ Descargar';
+  dlLink.style.cssText = 'color:#93c5fd;font-size:11px;text-decoration:none;padding:3px 8px;background:rgba(255,255,255,.1);border-radius:4px';
+  hdr.appendChild(nameSpan); hdr.appendChild(dlLink);
+  box.appendChild(hdr);
+  // Content
+  var content = document.createElement('div');
+  if(isImg){
+    var img = document.createElement('img');
+    img.src = b64; img.style.cssText = 'max-width:88vw;max-height:82vh;object-fit:contain;border-radius:8px;display:block';
+    content.appendChild(img);
+  } else if(isPdf){
+    var iframe = document.createElement('iframe');
+    iframe.src = b64; iframe.style.cssText = 'width:88vw;height:86vh;border:none;border-radius:8px;display:block';
+    content.appendChild(iframe);
+  } else {
+    var msg = document.createElement('div');
+    msg.style.cssText = 'padding:32px;text-align:center;color:#fff;font-size:14px';
+    msg.innerHTML = 'Vista previa no disponible.<br><a href="'+b64+'" download="'+(name||'archivo')+'" style="color:#60a5fa;font-weight:700;margin-top:12px;display:inline-block">⬇ Descargar</a>';
+    content.appendChild(msg);
+  }
+  box.appendChild(content);
+  inner.appendChild(box);
+  m.appendChild(inner);
+  document.body.appendChild(m);
+}
+
+function _verDocComm(commId) {
+  var comm = DB.comunicados.find(x=>x.id===commId);
+  if(!comm||!comm.doc_b64) return;
+  _abrirVisorDoc(comm.doc_b64, comm.doc_name||comm.radicado+'.pdf');
+}
+function _openEventoModal(commId) {
+  DB._eventoCommId=commId; DB._eventoFile=null;
+  var comm=DB.comunicados.find(x=>x.id===commId);
+  document.getElementById('mev_comm_label').textContent=comm?comm.radicado:commId;
+  ['mev_tipo','mev_fecha','mev_radicado','mev_asunto','mev_desc'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  document.getElementById('mev_file_preview').innerHTML='';
+  document.getElementById('modalEvento').classList.add('open');
+}
+function _closeEventoModal(){ document.getElementById('modalEvento').classList.remove('open'); }
+function _eventoFileChange(input){
+  var f=input.files[0]; if(!f) return;
+  var r=new FileReader(); r.onload=function(e){ DB._eventoFile={b64:e.target.result,name:f.name,mime:f.type};
+    document.getElementById('mev_file_preview').innerHTML='<div style="font-size:10.5px;color:var(--txt2);margin-top:4px;padding:4px 8px;background:var(--surface2);border-radius:4px">📎 '+f.name+'</div>';
+  }; r.readAsDataURL(f);
+}
+function _guardarEvento(){
+  var tipo=document.getElementById('mev_tipo').value;
+  var fecha=document.getElementById('mev_fecha').value;
+  var radicado=document.getElementById('mev_radicado').value.trim();
+  var asunto=document.getElementById('mev_asunto').value.trim();
+  var desc=document.getElementById('mev_desc').value.trim();
+  if(!tipo){showToast('Selecciona el tipo','error');return;}
+  if(!radicado){showToast('Número de oficio/correo obligatorio','error');return;}
+  if(!asunto){showToast('Asunto obligatorio','error');return;}
+  var ev={id:'EV_'+Date.now(),tipo:tipo,fecha:fecha||todayISO(),radicado_ref:radicado,asunto:asunto,descripcion:desc,
+    soporte_b64:DB._eventoFile?DB._eventoFile.b64:null,soporte_name:DB._eventoFile?DB._eventoFile.name:null,_collapsed:true,created_at:Date.now()};
+  var cid=DB._eventoCommId;
+  if(!DB.eventos) DB.eventos={};
+  if(!DB.eventos[cid]) DB.eventos[cid]=[];
+  DB.eventos[cid].push(ev);
+  _closeEventoModal(); renderTimeline(); showToast('✅ Evento registrado','ok');
+}
+
+function showTimelineForComm(id) {
+  var c = DB.comunicados.find(x=>x.id===id);
+  if (!c) return;
+  selectComm(id);
+  if (c.proyecto) { var tpEl=document.getElementById('tl_filtro_proyecto'); if(tpEl) tpEl.value=c.proyecto; }
+  switchDpTab('timeline', document.getElementById('dptab_timeline'));
+  renderTimeline();
+  setTimeout(function(){
+    var cards = document.querySelectorAll('.tl-card');
+    cards.forEach(function(card){
+      if (card.onclick && card.onclick.toString().includes(id)) {
+        card.scrollIntoView({behavior:'smooth',block:'center'});
+        card.style.border='2px solid var(--blue)';
+        setTimeout(function(){ card.style.border='1.5px solid var(--border)'; }, 2000);
+      }
+    });
+  }, 100);
+}
+
+// ════════════════════════════════════════════
+//  CONSTELACIÓN
+// ════════════════════════════════════════════
+function renderCorrelacion() { renderCorrelacionPanel(); }
+
+
+// ════════════════════════════════════════════
+//  DASHBOARD
+// ════════════════════════════════════════════
+function renderDashboard() {
+  var data = DB.comunicados;
+  var total = data.length;
+  var entrantes = data.filter(c=>c.tipo==='Entrante').length;
+  var salientes = data.filter(c=>c.tipo==='Saliente').length;
+  var pendientes = data.filter(c=>c.estado==='Pendiente respuesta').length;
+  var respondidos = data.filter(c=>c.estado==='Respondido').length;
+  var externos = data.filter(c=>c.ambito==='Externo').length;
+
+  // Por entidad (origen+destino)
+  var porEntidad={};
+  data.forEach(function(c){
+    porEntidad[c.origen]=(porEntidad[c.origen]||0)+1;
+    porEntidad[c.destino]=(porEntidad[c.destino]||0)+1;
+  });
+  var topEntidades=Object.entries(porEntidad).sort((a,b)=>b[1]-a[1]).slice(0,6);
+
+  // Por proyecto
+  var porProy={};
+  data.forEach(function(c){ if(c.proyecto) porProy[c.proyecto]=(porProy[c.proyecto]||0)+1; });
+  var topProy=Object.entries(porProy).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  // Por mes
+  var porMes={};
+  data.forEach(function(c){
+    var f=c.fecha_emision||c.fecha_recepcion||'';
+    if(f.length>=7){ var m=f.slice(0,7); porMes[m]=(porMes[m]||0)+1; }
+  });
+  var meses=Object.entries(porMes).sort((a,b)=>a[0]<b[0]?-1:1).slice(-8);
+  var maxM=meses.reduce((mx,m)=>Math.max(mx,m[1]),1);
+
+  function barChart(items, maxVal, color) {
+    if(!items.length) return '<div style="color:var(--muted);font-size:12px">Sin datos</div>';
+    return '<div class="bar-chart">'+items.map(function(item){
+      var pct=Math.round((item[1]/maxVal)*100);
+      return '<div class="bar-row">'
+        +'<div class="bar-label" title="'+item[0]+'">'+item[0]+'</div>'
+        +'<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>'
+        +'<div class="bar-val">'+item[1]+'</div>'
+        +'</div>';
+    }).join('')+'</div>';
+  }
+
+  var maxEnt = topEntidades.reduce((m,e)=>Math.max(m,e[1]),1);
+  var maxProy = topProy.reduce((m,e)=>Math.max(m,e[1]),1);
+
+  var donutR=52, cx=60, cy=60;
+  var donutSlices=[
+    {v:entrantes,c:'var(--blue)',l:'Entrantes'},
+    {v:salientes,c:'var(--orange)',l:'Salientes'},
+    {v:pendientes,c:'var(--yellow)',l:'Pendientes'},
+    {v:respondidos,c:'var(--green)',l:'Respondidos'}
+  ].filter(s=>s.v>0);
+  var donutTotal=donutSlices.reduce((s,x)=>s+x.v,0)||1;
+  var startAngle=-Math.PI/2;
+  var svgSlices=donutSlices.map(function(s){
+    var angle=(s.v/donutTotal)*Math.PI*2;
+    var x1=cx+donutR*Math.cos(startAngle), y1=cy+donutR*Math.sin(startAngle);
+    startAngle+=angle;
+    var x2=cx+donutR*Math.cos(startAngle), y2=cy+donutR*Math.sin(startAngle);
+    var large=angle>Math.PI?1:0;
+    var d='M'+cx+','+cy+' L'+x1+','+y1+' A'+donutR+','+donutR+' 0 '+large+',1 '+x2+','+y2+' Z';
+    return '<path d="'+d+'" fill="'+s.c+'" opacity="0.85"/>';
+  }).join('');
+
+  document.getElementById('dashContainer').innerHTML =
+    '<div style="margin-bottom:20px"><div style="font-size:18px;font-weight:800;color:var(--txt)">Dashboard</div><div style="font-size:12.5px;color:var(--muted);margin-top:2px">Estadísticas de comunicados registrados</div></div>'
+    +'<div class="kpi-grid">'
+    +[{v:total,l:'Total comunicados',sub:'registrados',c:'var(--blue)'},
+      {v:entrantes,l:'Entrantes',sub:'recibidos',c:'var(--blue)'},
+      {v:salientes,l:'Salientes',sub:'enviados',c:'var(--orange)'},
+      {v:pendientes,l:'Pendientes',sub:'sin respuesta',c:'var(--yellow)'},
+      {v:respondidos,l:'Respondidos',sub:'con respuesta',c:'var(--green)'},
+      {v:externos,l:'Externos',sub:'fuera de SCJ',c:'var(--purple)'}
+    ].map(function(k){
+      return '<div class="kpi-card"><div class="kpi-val" style="color:'+k.c+'">'+k.v+'</div><div class="kpi-lbl">'+k.l+'</div><div class="kpi-sub">'+k.sub+'</div></div>';
+    }).join('')
+    +'</div>'
+    +'<div class="charts-grid">'
+    +'<div class="chart-card"><div class="chart-title">Comunicados por entidad</div>'+barChart(topEntidades,maxEnt,'var(--blue)')+'</div>'
+    +'<div class="chart-card"><div class="chart-title">Distribución por tipo / estado</div><div class="donut-wrap"><svg width="120" height="120" viewBox="0 0 120 120">'+svgSlices+'<circle cx="60" cy="60" r="28" fill="var(--surface)"/><text x="60" y="64" text-anchor="middle" font-size="16" font-weight="800" font-family="DM Mono" fill="var(--txt)">'+total+'</text></svg><div class="donut-legend">'+donutSlices.map(function(s){ return '<div class="donut-lbl"><div class="donut-dot" style="background:'+s.c+'"></div>'+s.l+': <strong>'+s.v+'</strong></div>'; }).join('')+'</div></div></div>'
+    +'<div class="chart-card"><div class="chart-title">Por proyecto</div>'+barChart(topProy,maxProy,'var(--orange)')+'</div>'
+    +'<div class="chart-card"><div class="chart-title">Evolución mensual</div>'+barChart(meses,maxM,'var(--green)')+'</div>'
+    +'</div>';
+}
+
+// ════════════════════════════════════════════
+//  FILTROS DINÁMICOS
+// ════════════════════════════════════════════
+function _updateFiltros() {
+  var proyectos = _getProyectos();
+  var entidades = _getEntidades();
+  // Solo actualizar los selects del panel timeline (los filtros de la tabla son hidden inputs)
+  function _pop(id, items, label) {
+    var sel = document.getElementById(id);
+    if(!sel || sel.tagName!=='SELECT') return;
+    var cur = sel.value;
+    sel.innerHTML = '<option value="">'+label+'</option>';
+    items.forEach(function(e){ var o=document.createElement('option'); o.value=e; o.textContent=e; sel.appendChild(o); });
+    if(cur) sel.value = cur;
+  }
+  _pop('tl_filtro_proyecto', proyectos, 'Todos los proyectos');
+  _pop('tl_filtro_entidad', entidades, 'Todas las entidades');
+}
+
+// ════════════════════════════════════════════
+//  EXCEL IMPORT/EXPORT
+// ════════════════════════════════════════════
+var COLS = ['proyecto','contrato','rol','radicado','tipo','ambito','fecha_emision','fecha_recepcion','origen','destino','asunto','descripcion','estado','respuesta_a'];
+var HEADERS = ['Proyecto','Contrato','Rol','N° Radicado','Tipo','Ámbito','Fecha Emisión','Fecha Recepción','Origen','Destino','Asunto','Descripción','Estado','Responde a Radicado'];
+
+function exportExcel() {
+  if (!DB.comunicados.length) { showToast('No hay datos para exportar', 'error'); return; }
+  var ws_data = [HEADERS];
+  DB.comunicados.forEach(function(c){
+    var respA = c.respuesta_a ? (DB.comunicados.find(x=>x.id===c.respuesta_a)||{}).radicado||'' : '';
+    ws_data.push(COLS.map(function(k){ return k==='respuesta_a'?respA:(c[k]||''); }));
+  });
+  var wb = XLSX.utils.book_new();
+  var ws = XLSX.utils.aoa_to_sheet(ws_data);
+  ws['!cols'] = HEADERS.map(function(_,i){ return {wch: i===9?40:i===10?50:18}; });
+  XLSX.utils.book_append_sheet(wb, ws, 'Comunicados');
+  XLSX.writeFile(wb, 'COMMS_comunicados_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  showToast('✅ Excel exportado', 'ok');
+}
+
+function importExcel(input) {
+  var file = input.files[0]; if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var wb = XLSX.read(e.target.result, {type:'binary'});
+      var ws = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(ws, {header:1, defval:''});
+      if (rows.length < 2) { showToast('Excel vacío o sin datos', 'error'); return; }
+      var imported = 0, skipped = 0;
+      // Construir mapa de headers para encontrar columna "Responde a Radicado"
+      var headerRow = rows[0].map(function(h){ return String(h||'').trim(); });
+      var colIdx = {};
+      COLS.forEach(function(k){ colIdx[k] = -1; });
+      var headerAliases = {
+        'Proyecto':'proyecto','Contrato':'contrato','Rol':'rol',
+        'N° Radicado':'radicado','Tipo':'tipo','Ámbito':'ambito',
+        'Fecha Emisión':'fecha_emision','Fecha Recepción':'fecha_recepcion',
+        'Origen':'origen','Destino':'destino','Asunto':'asunto',
+        'Descripción':'descripcion','Estado':'estado',
+        'Responde a Radicado':'respuesta_a','Responde a radicado':'respuesta_a',
+        'responde_a':'respuesta_a'
+      };
+      headerRow.forEach(function(h,i){
+        var key = headerAliases[h] || h.toLowerCase().replace(/[^a-z0-9_]/g,'_');
+        if(COLS.indexOf(key)>=0 || key==='respuesta_a') colIdx[key] = i;
+      });
+      // Si no hay headers reconocidos usar posición por COLS
+      var usePositional = Object.values(colIdx).every(function(v){ return v===-1; });
+      var rawLinks = []; // {id, respuesta_radicado}
+      rows.slice(1).forEach(function(row){
+        var getVal = function(k){ return usePositional ? String(row[COLS.indexOf(k)]||'').trim() : (colIdx[k]>=0 ? String(row[colIdx[k]]||'').trim() : ''); };
+        var radicado = getVal('radicado') || String(row[usePositional?3:0]||'').trim();
+        if (!radicado) return;
+        var dup = DB.comunicados.find(function(x){ return x.radicado===radicado; });
+        if (dup) { skipped++; return; }
+        var obj = {id:'COMM_IMPORT_'+Date.now()+'_'+Math.random().toString(36).slice(2), created_at:Date.now()};
+        COLS.forEach(function(k){ if(k!=='respuesta_a') obj[k] = getVal(k); });
+        var respRad = getVal('respuesta_a');
+        obj.respuesta_a = null;
+        if(respRad) rawLinks.push({id:obj.id, respuesta_radicado:respRad});
+        DB.comunicados.push(obj);
+        imported++;
+      });
+      // Resolver respuesta_a por número de radicado
+      rawLinks.forEach(function(lk){
+        var target = DB.comunicados.find(function(x){ return x.radicado===lk.respuesta_radicado; });
+        var obj = DB.comunicados.find(function(x){ return x.id===lk.id; });
+        if(obj) obj.respuesta_a = target ? target.id : null;
+      });
+      // También resolver los que ya existían con radicado como valor
+      DB.comunicados.forEach(function(comm){
+        if(comm.respuesta_a && !DB.comunicados.find(function(x){ return x.id===comm.respuesta_a; })){
+          var t = DB.comunicados.find(function(x){ return x.radicado===comm.respuesta_a; });
+          comm.respuesta_a = t ? t.id : null;
+        }
+      });
+      renderTable(); renderTimeline(); _updateFiltros();
+      showToast('✅ Importados: '+imported+(skipped?' · Duplicados ignorados: '+skipped:''), 'ok');
+    } catch(err) { showToast('Error al leer Excel: '+err.message, 'error'); }
+    input.value='';
+  };
+  reader.readAsBinaryString(file);
+}
+
+// ════════════════════════════════════════════
+//  ARCHIVOS MENU
+// ════════════════════════════════════════════
+function _toggleArchivosMenu() {
+  var m = document.getElementById('archivosMenu');
+  if(!m) return;
+  var isOpen = m.style.display !== 'none';
+  m.style.display = isOpen ? 'none' : 'block';
+  if(!isOpen) {
+    setTimeout(function(){
+      document.addEventListener('click', function _closeArch(e){
+        var wrap = document.getElementById('archivosMenuWrap');
+        if(wrap && !wrap.contains(e.target)){ m.style.display='none'; document.removeEventListener('click',_closeArch); }
+      });
+    },10);
+  }
+}
+
+// ════════════════════════════════════════════
+//  EXPORT / IMPORT ZIP
+// ════════════════════════════════════════════
+function exportZIP() {
+  if(!DB.comunicados.length){ showToast('Sin comunicados para exportar','error'); return; }
+  var JSZipExists = typeof JSZip !== 'undefined';
+  if(!JSZipExists){ showToast('JSZip no disponible — exportando datos JSON...','error');
+    var blob=new Blob([JSON.stringify({comunicados:DB.comunicados,eventos:DB.eventos},null,2)],{type:'application/json'});
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='COMMS_sesion.json'; a.click(); return; }
+  // Con JSZip
+  var zip = new JSZip();
+  // JSON completo
+  zip.file('sesion.json', JSON.stringify({comunicados:DB.comunicados,eventos:DB.eventos},null,2));
+  // Excel
+  var wsData = [HEADERS];
+  DB.comunicados.forEach(function(comm){
+    var respA = comm.respuesta_a ? (DB.comunicados.find(x=>x.id===comm.respuesta_a)||{}).radicado||'' : '';
+    wsData.push(COLS.map(function(k){ return k==='respuesta_a'?respA:(comm[k]||''); }));
+  });
+  var wb=XLSX.utils.book_new(), ws=XLSX.utils.aoa_to_sheet(wsData);
+  XLSX.utils.book_append_sheet(wb,ws,'Comunicados');
+  var excelBin = XLSX.write(wb,{type:'binary',bookType:'xlsx'});
+  zip.file('comunicados.xlsx', excelBin, {binary:true});
+  // Anexos (documentos PDF/imagen adjuntos)
+  var anexosFolder = zip.folder('anexos');
+  DB.comunicados.forEach(function(comm){
+    if(comm.doc_b64 && comm.doc_name){
+      try{
+        var b64data = comm.doc_b64.split(';base64,')[1];
+        if(b64data) anexosFolder.file(comm.radicado+'_'+comm.doc_name, b64data, {base64:true});
+      }catch(e){}
+    }
+  });
+  // Eventos con soportes
+  Object.keys(DB.eventos||{}).forEach(function(commId){
+    (DB.eventos[commId]||[]).forEach(function(ev){
+      if(ev.soporte_b64 && ev.soporte_name){
+        try{
+          var b64data = ev.soporte_b64.split(';base64,')[1];
+          var comm = DB.comunicados.find(x=>x.id===commId);
+          var prefix = comm ? comm.radicado : commId;
+          if(b64data) anexosFolder.file(prefix+'_ev_'+ev.id+'_'+ev.soporte_name, b64data, {base64:true});
+        }catch(e){}
+      }
+    });
+  });
+  zip.generateAsync({type:'blob'}).then(function(blob){
+    var a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+    a.download='COMMS_'+new Date().toISOString().slice(0,10)+'.zip'; a.click();
+    showToast('✅ ZIP exportado con JSON + Excel + Anexos','ok');
+  });
+}
+
+function importZIP(input) {
+  var f=input.files[0]; if(!f) return;
+  if(typeof JSZip==='undefined'){ showToast('JSZip no disponible','error'); return; }
+  JSZip.loadAsync(f).then(function(zip){
+    var jsonFile = zip.file('sesion.json');
+    if(!jsonFile){ showToast('ZIP inválido: no contiene sesion.json','error'); return; }
+    return jsonFile.async('string').then(function(text){
+      try{
+        var sesion = JSON.parse(text);
+        if(sesion.comunicados) DB.comunicados = sesion.comunicados;
+        if(sesion.eventos) DB.eventos = sesion.eventos;
+        renderTable(); renderTimeline(); _updateFiltros();
+        showToast('✅ Sesión importada desde ZIP: '+DB.comunicados.length+' comunicados','ok');
+      }catch(e){ showToast('Error leyendo ZIP: '+e.message,'error'); }
+    });
+  }).catch(function(e){ showToast('Error al abrir ZIP: '+e.message,'error'); });
+  input.value='';
+}
+
+// ════════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════════
+// Datos de ejemplo
+var ejemplos = [
+  {id:'E1',radicado:'SCJ-2026-001001',tipo:'Entrante',ambito:'Externo',fecha_emision:'2026-01-15',fecha_recepcion:'2026-01-16',origen:'Interventoría GEC',destino:'SCJ',proyecto:'CER FASE II',contrato:'SCJ-1846-2021',rol:'Interventoría',asunto:'Entrega Informe de Revisión Versión 01',descripcion:'Se adjuntan planos y memorias de la revisión del primer corte.',estado:'Respondido',respuesta_a:null,created_at:1},
+  {id:'E2',radicado:'SCJ-2026-001045',tipo:'Saliente',ambito:'Externo',fecha_emision:'2026-01-22',fecha_recepcion:'',origen:'SCJ',destino:'Interventoría GEC',proyecto:'CER FASE II',contrato:'SCJ-1846-2021',rol:'Supervisión',asunto:'Respuesta a Informe Rev. 01 — Observaciones pendientes',descripcion:'Se remiten 9 observaciones pendientes de subsanación.',estado:'Sin respuesta requerida',respuesta_a:'E1',created_at:2},
+  {id:'E3',radicado:'SCJ-2026-001200',tipo:'Entrante',ambito:'Interno',fecha_emision:'2026-02-10',fecha_recepcion:'2026-02-10',origen:'Bienes',destino:'Operaciones',proyecto:'CER FASE II',contrato:'SCJ-1846-2021',rol:'Contratante',asunto:'Solicitud certificación presupuestal contrato SCJ-1846',descripcion:'Se solicita certificación para el siguiente trimestre.',estado:'Pendiente respuesta',respuesta_a:null,created_at:3},
+  {id:'E4',radicado:'SCJ-2026-001350',tipo:'Entrante',ambito:'Externo',fecha_emision:'2026-03-05',fecha_recepcion:'2026-03-05',origen:'Interventoría GEC',destino:'SCJ',proyecto:'CER FASE II',contrato:'SCJ-1846-2021',asunto:'Entrega Informe de Revisión Versión 02',descripcion:'Segunda entrega de revisión con correcciones arquitectónicas.',estado:'Pendiente respuesta',respuesta_a:null,created_at:4},
+  {id:'E5',radicado:'IDIPRON-2026-0042',tipo:'Entrante',ambito:'Externo',fecha_emision:'2026-02-28',fecha_recepcion:'2026-03-01',origen:'IDIPRON',destino:'SCJ',proyecto:'IDIPRON 2025',contrato:'SCJ-0042-2025',asunto:'Radicación acta de inicio contrato de interventoría',descripcion:'',estado:'Respondido',respuesta_a:null,created_at:5},
+  {id:'E6',radicado:'SCJ-2026-001500',tipo:'Saliente',ambito:'Externo',fecha_emision:'2026-03-12',fecha_recepcion:'',origen:'SCJ',destino:'Bienes',proyecto:'CER FASE II',contrato:'SCJ-1846-2021',asunto:'Remisión actas de seguimiento mensual febrero 2026',descripcion:'Se remiten 4 actas de seguimiento.',estado:'Sin respuesta requerida',respuesta_a:null,created_at:6}
+];
+DB.comunicados = ejemplos;
+_updateFiltros();
+renderTable();
+renderTimeline();
+window.addEventListener('resize', function(){ if(DB._dpTab==='correl') renderCorrelacionPanel(); });
+</script>
+</body>
+</html>
