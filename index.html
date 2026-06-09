@@ -175,9 +175,110 @@ textarea.finput{resize:vertical;min-height:70px}
 
 @keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .modal-box{animation:fadeIn .18s ease}
+
+/* ── LOGIN ── */
+.login-screen{position:fixed;inset:0;background:#0d1b3e;z-index:99999;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.login-screen.hidden{display:none}
+#constellationCanvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.login-card{position:relative;z-index:2;background:rgba(255,255,255,.97);border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.5);width:400px;max-width:94vw;overflow:hidden;animation:fadeIn .3s ease}
+.login-header{background:linear-gradient(135deg,#0f2460,#1d4ed8);padding:32px 32px 24px;text-align:center;position:relative;overflow:hidden}
+.login-header::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 70% 30%,rgba(99,179,255,.18) 0%,transparent 60%)}
+.login-logo{width:52px;height:52px;background:rgba(255,255,255,.15);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;backdrop-filter:blur(4px)}
+.login-logo svg{width:26px;height:26px;stroke:#fff;fill:none;stroke-width:2}
+.login-appname{font-size:22px;font-weight:900;color:#fff;letter-spacing:-.5px}
+.login-appsub{font-size:11.5px;color:rgba(255,255,255,.7);margin-top:3px}
+.login-body{padding:28px 32px 32px}
+.login-title{font-size:16px;font-weight:800;color:var(--txt);margin-bottom:4px}
+.login-sub{font-size:12px;color:var(--muted);margin-bottom:22px}
+.login-field{margin-bottom:14px}
+.login-label{font-size:10.5px;font-weight:700;color:var(--txt2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:5px}
+.login-input{width:100%;border:1.5px solid var(--border);border-radius:var(--r);padding:9px 12px;font-size:13.5px;color:var(--txt);background:var(--surface);outline:none;transition:border-color .15s;font-family:'DM Sans',sans-serif}
+.login-input:focus{border-color:var(--blue)}
+.login-error{font-size:11.5px;color:var(--red);background:var(--red-l);border-radius:var(--r);padding:8px 12px;margin-bottom:14px;display:none}
+.login-error.show{display:block}
+.login-btn{width:100%;padding:10px;background:var(--blue);color:#fff;border:none;border-radius:var(--r);font-size:14px;font-weight:700;cursor:pointer;font-family:'DM Sans',sans-serif;transition:background .15s;margin-top:4px}
+.login-btn:hover{background:var(--blue-h)}
+.login-footer{font-size:10.5px;color:var(--muted);text-align:center;margin-top:18px}
+/* Avatar en topbar */
+.user-chip{display:flex;align-items:center;gap:7px;padding:4px 10px 4px 4px;background:var(--surface2);border-radius:20px;border:1.5px solid var(--border);cursor:default}
+.user-avatar{width:26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.user-name{font-size:12px;font-weight:600;color:var(--txt);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn-logout{padding:5px 10px;background:none;border:1.5px solid var(--border);border-radius:var(--r);font-size:11.5px;font-weight:600;color:var(--txt2);cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s}
+.btn-logout:hover{background:var(--red-l);border-color:var(--red);color:var(--red)}
 </style>
 </head>
 <body>
+
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="loginScreen">
+  <canvas id="constellationCanvas"></canvas>
+  <div class="login-card">
+    <div class="login-header">
+      <div class="login-logo">
+        <svg viewBox="0 0 24 24"><path d="M4 4h16v12H4z"/><path d="M8 20h8M12 16v4"/><path d="M4 8l8 5 8-5"/></svg>
+      </div>
+      <div class="login-appname">COMMS</div>
+      <div class="login-appsub">Control de Comunicados — GEC</div>
+    </div>
+    <div class="login-body">
+      <div class="login-title">Iniciar sesión</div>
+      <div class="login-sub">Ingresa tus credenciales para continuar</div>
+      <div class="login-field">
+        <label class="login-label">Usuario</label>
+        <input class="login-input" id="loginUser" type="text" placeholder="Nombre.Apellido" autocomplete="username" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="login-field">
+        <label class="login-label">Contraseña</label>
+        <input class="login-input" id="loginPass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="login-error" id="loginError">Usuario o contraseña incorrectos.</div>
+      <button class="login-btn" onclick="doLogin()">Ingresar</button>
+      <div class="login-footer">
+        v1.0 · Green Engineering Consulting<br>
+        <span style="font-size:10px;color:#b0b8c9;">© 2026 Todos los derechos reservados · Ing. Johan Manuel Cárdenas Leal</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL AVISO DE USO -->
+<div class="modal-overlay" id="usageModal" style="z-index:999999">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-hdr">
+      <div>
+        <div class="modal-ttl" style="display:flex;align-items:center;gap:8px">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#d97706" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Aviso de uso
+        </div>
+        <div class="modal-sub">Por favor lea antes de continuar</div>
+      </div>
+    </div>
+    <div class="modal-body" style="gap:12px">
+      <div style="background:#fffbeb;border:1.5px solid #fde68a;border-radius:8px;padding:14px 16px;font-size:12.5px;color:#78350f;line-height:1.7">
+        Esta aplicación es de uso <strong>exclusivo del personal autorizado</strong> de Green Engineering Consulting (GEC). El acceso, uso o reproducción no autorizada de la información aquí contenida constituye una infracción a las normas de confidencialidad de la empresa.
+      </div>
+      <div style="font-size:12.5px;color:#374151;line-height:1.75;padding:0 2px">
+        <strong style="color:#1a1d23">Al ingresar usted acepta que:</strong>
+        <ul style="margin-top:8px;padding-left:18px;display:flex;flex-direction:column;gap:5px">
+          <li>La información gestionada en esta plataforma es de carácter <strong>oficial y reservado</strong>.</li>
+          <li>Queda <strong>prohibida</strong> la divulgación, copia o distribución de datos sin autorización expresa del responsable técnico.</li>
+          <li>Sus acciones dentro del sistema quedan <strong>vinculadas a su usuario</strong> y pueden ser auditadas.</li>
+          <li>El uso indebido puede acarrear <strong>responsabilidades disciplinarias y legales</strong> conforme a la normativa vigente.</li>
+        </ul>
+      </div>
+      <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:8px;padding:10px 14px;font-size:11.5px;color:#1e40af;display:flex;align-items:center;gap:10px">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Desarrollado por <strong style="margin-left:4px">Ing. Johan Manuel Cárdenas Leal</strong> &nbsp;·&nbsp; GEC Green Engineering Consulting &nbsp;·&nbsp; 2026
+      </div>
+    </div>
+    <div class="modal-ftr">
+      <button class="btn-save" onclick="document.getElementById('usageModal').classList.remove('open');document.getElementById('loginUser').focus()">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#fff" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Entendido, continuar
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- TOPBAR -->
 <div class="topbar">
@@ -228,6 +329,15 @@ textarea.finput{resize:vertical;min-height:70px}
     </div>
     <button class="btn-primary" onclick="openModal()">
       <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nuevo Comunicado
+    </button>
+    <div class="topbar-sep"></div>
+    <div class="user-chip" id="userChip">
+      <div class="user-avatar" id="userAvatar">--</div>
+      <span class="user-name" id="userLabel">—</span>
+    </div>
+    <button class="btn-logout" onclick="doLogout()" title="Cerrar sesión">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      Salir
     </button>
   </div>
 </div>
@@ -421,7 +531,7 @@ textarea.finput{resize:vertical;min-height:70px}
       <div class="frow">
         <div class="fg">
           <div class="flabel">Origen <span>*</span></div>
-          <input class="finput" id="f_origen" placeholder="Ej: SCJ — Secretaría Distrital" list="list_entidades">
+          <input class="finput" id="f_origen" placeholder="Ej: GEC — Green Engineering" list="list_entidades">
           <datalist id="list_entidades"></datalist>
         </div>
         <div class="fg">
@@ -1788,23 +1898,182 @@ function importZIP(input) {
   input.value='';
 }
 
+
+
+// ════════════════════════════════════════════
+//  CONSTELLATION BACKGROUND
+// ════════════════════════════════════════════
+(function(){
+  var canvas, ctx, stars=[], mouse={x:-9999,y:-9999}, raf;
+  var N_STARS=120, CONNECT_DIST=140, MOUSE_DIST=180;
+
+  function resize(){
+    canvas.width=window.innerWidth;
+    canvas.height=window.innerHeight;
+  }
+
+  function randBetween(a,b){ return a+(Math.random()*(b-a)); }
+
+  function initStars(){
+    stars=[];
+    for(var i=0;i<N_STARS;i++){
+      stars.push({
+        x: Math.random()*canvas.width,
+        y: Math.random()*canvas.height,
+        vx: randBetween(-0.18,0.18),
+        vy: randBetween(-0.12,0.12),
+        r:  randBetween(1,2.4),
+        alpha: randBetween(0.5,1)
+      });
+    }
+  }
+
+  function drawFrame(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // Update positions
+    for(var i=0;i<stars.length;i++){
+      var s=stars[i];
+      s.x+=s.vx; s.y+=s.vy;
+      if(s.x<-10) s.x=canvas.width+10;
+      if(s.x>canvas.width+10) s.x=-10;
+      if(s.y<-10) s.y=canvas.height+10;
+      if(s.y>canvas.height+10) s.y=-10;
+    }
+
+    // Draw lines
+    for(var i=0;i<stars.length;i++){
+      for(var j=i+1;j<stars.length;j++){
+        var dx=stars[i].x-stars[j].x, dy=stars[i].y-stars[j].y;
+        var d=Math.sqrt(dx*dx+dy*dy);
+        if(d<CONNECT_DIST){
+          var op=(1-d/CONNECT_DIST)*0.35;
+          ctx.beginPath();
+          ctx.moveTo(stars[i].x,stars[i].y);
+          ctx.lineTo(stars[j].x,stars[j].y);
+          ctx.strokeStyle='rgba(147,197,253,'+op+')';
+          ctx.lineWidth=0.6;
+          ctx.stroke();
+        }
+      }
+      // Mouse attract lines
+      var mdx=stars[i].x-mouse.x, mdy=stars[i].y-mouse.y;
+      var md=Math.sqrt(mdx*mdx+mdy*mdy);
+      if(md<MOUSE_DIST){
+        var mop=(1-md/MOUSE_DIST)*0.6;
+        ctx.beginPath();
+        ctx.moveTo(stars[i].x,stars[i].y);
+        ctx.lineTo(mouse.x,mouse.y);
+        ctx.strokeStyle='rgba(96,165,250,'+mop+')';
+        ctx.lineWidth=0.8;
+        ctx.stroke();
+      }
+    }
+
+    // Draw stars
+    for(var i=0;i<stars.length;i++){
+      var s=stars[i];
+      ctx.beginPath();
+      ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle='rgba(224,242,254,'+s.alpha+')';
+      ctx.fill();
+      // glow
+      var grd=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,s.r*3);
+      grd.addColorStop(0,'rgba(147,197,253,0.25)');
+      grd.addColorStop(1,'rgba(147,197,253,0)');
+      ctx.beginPath();
+      ctx.arc(s.x,s.y,s.r*3,0,Math.PI*2);
+      ctx.fillStyle=grd;
+      ctx.fill();
+    }
+
+    raf=requestAnimationFrame(drawFrame);
+  }
+
+  function startConstellation(){
+    canvas=document.getElementById('constellationCanvas');
+    if(!canvas) return;
+    ctx=canvas.getContext('2d');
+    resize();
+    initStars();
+    window.addEventListener('resize',function(){ resize(); initStars(); });
+    document.getElementById('loginScreen').addEventListener('mousemove',function(e){
+      mouse.x=e.clientX; mouse.y=e.clientY;
+    });
+    document.getElementById('loginScreen').addEventListener('mouseleave',function(){
+      mouse.x=-9999; mouse.y=-9999;
+    });
+    drawFrame();
+  }
+
+  function stopConstellation(){
+    if(raf) cancelAnimationFrame(raf);
+  }
+
+  // expose
+  window._startConstellation=startConstellation;
+  window._stopConstellation=stopConstellation;
+})();
+
+// ════════════════════════════════════════════
+//  LOGIN
+// ════════════════════════════════════════════
+var USERS = {
+  'Monica.Manrique':  '1234',
+  'Johan.Cardenas':   '1234',
+  'Luis.Ramirez':     '1234',
+  'David.Barrios':    '1234',
+  'Nicolas.Rodriguez':'1234',
+  'Sebastian.Beleño': '1234'
+};
+var currentUser = null;
+
+function doLogin() {
+  var u = document.getElementById('loginUser').value.trim();
+  var p = document.getElementById('loginPass').value;
+  var err = document.getElementById('loginError');
+  // Búsqueda case-insensitive
+  var match = Object.keys(USERS).find(function(k){ return k.toLowerCase() === u.toLowerCase(); });
+  if(match && USERS[match] === p) {
+    currentUser = match;
+    err.classList.remove('show');
+    _stopConstellation();
+    document.getElementById('loginScreen').classList.add('hidden');
+    // Mostrar avatar y nombre en topbar
+    var parts = match.split('.');
+    var initials = (parts[0][0]||'') + (parts[1] ? parts[1][0] : '');
+    document.getElementById('userAvatar').textContent = initials.toUpperCase();
+    document.getElementById('userLabel').textContent = parts[0] + ' ' + (parts[1]||'');
+    renderTable(); renderTimeline(); _updateFiltros();
+    // Mostrar aviso de uso
+    document.getElementById('usageModal').classList.add('open');
+  } else {
+    err.classList.add('show');
+    document.getElementById('loginPass').value = '';
+    document.getElementById('loginPass').focus();
+  }
+}
+
+function doLogout() {
+  currentUser = null;
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginError').classList.remove('show');
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('userAvatar').textContent = '--';
+  document.getElementById('userLabel').textContent = '—';
+  _startConstellation();
+  document.getElementById('loginUser').focus();
+}
+
 // ════════════════════════════════════════════
 //  INIT
 // ════════════════════════════════════════════
-// Datos de ejemplo
-var ejemplos = [
-  {id:'E1',radicado:'SCJ-2026-001001',tipo:'Entrante',ambito:'Externo',fecha_emision:'2026-01-15',fecha_recepcion:'2026-01-16',origen:'Interventoría GEC',destino:'SCJ',proyecto:'CER FASE II',contrato:'SCJ-1846-2021',rol:'Interventoría',asunto:'Entrega Informe de Revisión Versión 01',descripcion:'Se adjuntan planos y memorias de la revisión del primer corte.',estado:'Respondido',respuesta_a:null,created_at:1},
-  {id:'E2',radicado:'SCJ-2026-001045',tipo:'Saliente',ambito:'Externo',fecha_emision:'2026-01-22',fecha_recepcion:'',origen:'SCJ',destino:'Interventoría GEC',proyecto:'CER FASE II',contrato:'SCJ-1846-2021',rol:'Supervisión',asunto:'Respuesta a Informe Rev. 01 — Observaciones pendientes',descripcion:'Se remiten 9 observaciones pendientes de subsanación.',estado:'Sin respuesta requerida',respuesta_a:'E1',created_at:2},
-  {id:'E3',radicado:'SCJ-2026-001200',tipo:'Entrante',ambito:'Interno',fecha_emision:'2026-02-10',fecha_recepcion:'2026-02-10',origen:'Bienes',destino:'Operaciones',proyecto:'CER FASE II',contrato:'SCJ-1846-2021',rol:'Contratante',asunto:'Solicitud certificación presupuestal contrato SCJ-1846',descripcion:'Se solicita certificación para el siguiente trimestre.',estado:'Pendiente respuesta',respuesta_a:null,created_at:3},
-  {id:'E4',radicado:'SCJ-2026-001350',tipo:'Entrante',ambito:'Externo',fecha_emision:'2026-03-05',fecha_recepcion:'2026-03-05',origen:'Interventoría GEC',destino:'SCJ',proyecto:'CER FASE II',contrato:'SCJ-1846-2021',asunto:'Entrega Informe de Revisión Versión 02',descripcion:'Segunda entrega de revisión con correcciones arquitectónicas.',estado:'Pendiente respuesta',respuesta_a:null,created_at:4},
-  {id:'E5',radicado:'IDIPRON-2026-0042',tipo:'Entrante',ambito:'Externo',fecha_emision:'2026-02-28',fecha_recepcion:'2026-03-01',origen:'IDIPRON',destino:'SCJ',proyecto:'IDIPRON 2025',contrato:'SCJ-0042-2025',asunto:'Radicación acta de inicio contrato de interventoría',descripcion:'',estado:'Respondido',respuesta_a:null,created_at:5},
-  {id:'E6',radicado:'SCJ-2026-001500',tipo:'Saliente',ambito:'Externo',fecha_emision:'2026-03-12',fecha_recepcion:'',origen:'SCJ',destino:'Bienes',proyecto:'CER FASE II',contrato:'SCJ-1846-2021',asunto:'Remisión actas de seguimiento mensual febrero 2026',descripcion:'Se remiten 4 actas de seguimiento.',estado:'Sin respuesta requerida',respuesta_a:null,created_at:6}
-];
-DB.comunicados = ejemplos;
 _updateFiltros();
-renderTable();
-renderTimeline();
 window.addEventListener('resize', function(){ if(DB._dpTab==='correl') renderCorrelacionPanel(); });
+// Arrancar constelación y focus
+_startConstellation();
+document.getElementById('loginUser').focus();
 </script>
 </body>
 </html>
